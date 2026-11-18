@@ -23,5 +23,5 @@ DISPLAY_NAMES = {
     "Sphynx": "Sphynx",
 }
 
-K_CHOICES = [1, 3, 5, 7, 9, 11]
+K_CHOICES = [1, 3, 5, 7, 9, 11, 13, 15, 19, 25]
 METRIC_LABELS = {"Euclidean": "euclidean", "Manhattan": "manhattan"}

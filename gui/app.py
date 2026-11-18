@@ -108,8 +108,8 @@ class PetClassifierApp(ctk.CTk):
         self.k_slider = ctk.CTkSlider(
             side,
             from_=1,
-            to=11,
-            number_of_steps=10,
+            to=max(K_CHOICES),
+            number_of_steps=max(K_CHOICES) - 1,
             command=self._on_k_change,
         )
         self.k_slider.set(5)
