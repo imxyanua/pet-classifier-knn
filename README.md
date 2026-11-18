@@ -25,7 +25,7 @@ Mỗi ảnh đi qua pipeline sau:
 |---|---|
 | Tiền xử lý và phân đoạn đối tượng | Resize, làm mờ, GrabCut, đóng/mở hình thái học, giữ contour lớn nhất |
 | Trích đặc trưng màu và hình dạng | Thống kê và histogram HSV trên vùng đối tượng; tỷ lệ khung, độ đặc, độ tròn, Hu moments |
-| Cài đặt k-NN, khảo sát ảnh hưởng của \(k\) hoặc khoảng cách | k-NN tự viết; khảo sát \(k \in \{1,3,5,7,9,11\}\) với cả Euclidean và Manhattan |
+| Cài đặt k-NN, khảo sát ảnh hưởng của $k$ hoặc khoảng cách | k-NN tự viết; khảo sát $k$ = 1, 3, 5, 7, 9, 11 với cả Euclidean và Manhattan |
 | Đánh giá bằng độ chính xác và ma trận nhầm lẫn | Accuracy và confusion matrix 5×5 tự cài |
 
 Ngoài ra có một desktop app (CustomTkinter) để nhận dạng từng ảnh và xem kết quả đánh giá trực quan.
@@ -47,8 +47,8 @@ Kết quả tốt nhất: **Manhattan, k=5, accuracy 58.0%**. Đoán ngẫu nhi�
 
 Nhận xét:
 
-- **Manhattan ổn định hơn Euclidean** ở hầu hết các giá trị \(k\). Khoảng cách L1 ít bị chi phối bởi một vài chiều lệch lớn, phù hợp khi vector trộn nhiều loại đặc trưng.
-- \(k\) quá nhỏ (k=1) dễ bị nhiễu bởi một láng giềng sai; \(k\) quá lớn (k=11 với Euclidean) kéo thêm mẫu của lớp khác vào vote. Vùng \(k\) = 5–7 cho kết quả tốt nhất.
+- **Manhattan ổn định hơn Euclidean** ở hầu hết các giá trị $k$. Khoảng cách L1 ít bị chi phối bởi một vài chiều lệch lớn, phù hợp khi vector trộn nhiều loại đặc trưng.
+- $k$ quá nhỏ (k=1) dễ bị nhiễu bởi một láng giềng sai; $k$ quá lớn (k=11 với Euclidean) kéo thêm mẫu của lớp khác vào vote. Vùng $k$ = 5–7 cho kết quả tốt nhất.
 - **Bombay** nhận dạng tốt nhất (29/40) vì lông đen tuyền khác hẳn các giống còn lại.
 - **Egyptian Mau** kém nhất (18/40), hay nhầm sang Samoyed (9) và Sphynx (8). Lông xám nhạt lốm đốm có histogram màu gần với lông trắng và da hồng/xám.
 - **Pug** bị nhầm sang Samoyed (7) và Bombay (6). Phần lớn lỗi đến từ phân đoạn: GrabCut thường chỉ lấy được phần mặt hoặc lấy lẫn nền.
@@ -80,7 +80,7 @@ Vector đặc trưng có 34 chiều, chỉ tính trên các pixel thuộc mask �
 - aspect ratio: rộng / cao của bounding box
 - extent: diện tích / diện tích bounding box
 - solidity: diện tích / diện tích bao lồi
-- circularity: \(4\pi A / P^2\)
+- circularity: $4\pi A / P^2$
 - eccentricity: cạnh ngắn / cạnh dài của hình chữ nhật xoay nhỏ nhất
 - 7 Hu moments (lấy log để cùng thang đo)
 
@@ -180,21 +180,24 @@ python app.py
 
 - **Trích đặc trưng & đánh giá**: chạy k-NN trên tập test với khoảng cách đang chọn
 - **Tính lại đặc trưng**: bỏ qua cache và trích lại toàn bộ
-- hiển thị accuracy, biểu đồ accuracy theo \(k\) và ma trận nhầm lẫn
+- hiển thị accuracy, biểu đồ accuracy theo $k$ và ma trận nhầm lẫn
 
 Nếu chưa có cache, hãy chạy tab Đánh giá (hoặc `python evaluate.py`) trước khi nhận dạng.
 
 ## Hạn chế
 
 - **Phân đoạn chưa ổn định.** GrabCut được khởi tạo bằng một hình chữ nhật cố định (cách mép 8%). Với ảnh như Pug ở hình đầu trang, mask chỉ lấy được phần mặt; với Sphynx thì lấy dính cả sàn. Mask sai làm lệch cả đặc trưng màu lẫn hình dạng.
-- **Đặc trưng hình dạng phụ thuộc tư thế.** Con vật nằm, ngồi hay đứng cho contour rất khác nhau, nên Hu moments và aspect ratio dao động mạnh trong cùng một giống.
-- **Chỉ một lần chia train/test.** Kết quả có thể thay đổi vài phần trăm khi đổi `seed`; cross-validation sẽ cho số liệu tin cậy hơn.
-- **Chọn k trên tập test.** Bảng khảo sát dùng trực tiếp tập test để so sánh \(k\), nên 58% là ước lượng hơi lạc quan.
+- **Đặc trưng hình dạng gần như không giúp phân loại.** Con vật nằm, ngồi hay đứng cho contour rất khác nhau. Dùng riêng hình dạng chỉ đạt 29%; bỏ Hu moments còn làm accuracy tăng khoảng 1.5 điểm.
+- **Chỉ một lần chia train/test.** Lặp với 10 seed cho 55.5% ± 2.3%, nên 58% với `seed=42` nằm ở phía cao.
+- **Chọn k trên tập test.** Bảng khảo sát dùng trực tiếp tập test để so sánh $k$, nên 58% là ước lượng hơi lạc quan.
 
-## Hướng phát triển
+## Tài liệu chi tiết
 
-- thêm không gian màu Lab, histogram màu 2D (H–S) hoặc histogram mịn hơn
-- khởi tạo GrabCut tốt hơn hoặc dùng mask có sẵn trong bộ Oxford (trimaps) để so sánh
-- đánh trọng số cho từng nhóm đặc trưng trước khi tính khoảng cách
-- k-fold cross-validation và tập validation riêng để chọn \(k\)
-- vote có trọng số theo khoảng cách (\(1/d\))
+Thư mục [`docs/`](docs/README.md) giải thích từng bước, cách đọc kết quả, các thí nghiệm bổ sung và hướng cải thiện:
+
+1. [Tổng quan](docs/01-tong-quan.md): bài toán, dữ liệu, cấu trúc code, luồng dữ liệu
+2. [Tiền xử lý và phân đoạn](docs/02-tien-xu-ly-va-phan-doan.md)
+3. [Đặc trưng ảnh](docs/03-dac-trung.md)
+4. [Thuật toán k-NN](docs/04-knn.md)
+5. [Đánh giá](docs/05-danh-gia.md): kết quả, ma trận nhầm lẫn, ablation theo nhóm đặc trưng
+6. [Hướng cải thiện](docs/06-huong-cai-thien.md): xếp theo thứ tự ưu tiên
