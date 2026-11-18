@@ -94,3 +94,16 @@ def confusion_matrix(y_true, y_pred, classes):
         if t in index and p in index:
             matrix[index[t], index[p]] += 1
     return matrix
+
+
+def per_class_metrics(matrix):
+    """Precision, recall, F1 theo từng lớp từ ma trận nhầm lẫn (hàng = thực tế)."""
+    matrix = np.asarray(matrix, dtype=np.float64)
+    tp = np.diag(matrix)
+    predicted = matrix.sum(axis=0)
+    actual = matrix.sum(axis=1)
+    precision = np.divide(tp, predicted, out=np.zeros_like(tp), where=predicted > 0)
+    recall = np.divide(tp, actual, out=np.zeros_like(tp), where=actual > 0)
+    denom = precision + recall
+    f1 = np.divide(2 * precision * recall, denom, out=np.zeros_like(tp), where=denom > 0)
+    return precision, recall, f1
