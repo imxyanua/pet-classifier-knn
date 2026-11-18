@@ -72,7 +72,26 @@ Với 5 lớp, hòa có thể xảy ra ngay cả khi $k$ lẻ (ví dụ $k=5$ ch
 | Vừa | Cân bằng giữa chi tiết và ổn định. |
 | Lớn | Biên trơn, nhưng láng giềng bắt đầu lấy mẫu từ lớp khác. Dễ **underfit**; khi $k$ tiến tới $N$, luôn dự đoán lớp đông nhất. |
 
-Trên dữ liệu này, $k=1$ luôn kém nhất. Với Euclidean, accuracy giảm rõ khi $k > 5$; với Manhattan, vùng $k$ = 5–7 tốt nhất. Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
+Trên dữ liệu này, $k=1$ luôn kém nhất (khoảng 50% accuracy CV). Với Manhattan, accuracy tăng tới khoảng $k=7$ rồi gần như phẳng tới $k=25$; với Euclidean, đạt đỉnh ở $k=13$ rồi giảm. Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
+
+## Chọn k bằng cross-validation
+
+Code: [`knn/validation.py`](../knn/validation.py).
+
+$k$ và khoảng cách là **siêu tham số**: chúng không được học từ dữ liệu mà phải chọn trước. Cách sai phổ biến là thử mọi $k$ trên tập test rồi báo cáo $k$ cho kết quả cao nhất. Làm vậy, tập test đã bị dùng để ra quyết định, nên con số báo cáo bị lạc quan: nó đo xem cấu hình được chọn khớp với **chính 200 ảnh đó** tốt đến đâu, chứ không đo khả năng trên ảnh mới.
+
+Cross-validation $K$ fold (ở đây $K=5$) giải quyết bằng cách chỉ dùng tập train:
+
+1. `stratified_k_fold` chia 800 ảnh train thành 5 phần, mỗi phần giữ tỷ lệ lớp (mỗi giống 32 ảnh mỗi phần).
+2. Với mỗi phần $f$: dùng 4 phần còn lại làm "train tạm", phần $f$ làm "validation".
+3. `cross_val_accuracy` chạy k-NN và tính accuracy trên từng phần validation, rồi lấy trung bình 5 lần.
+4. `select_params` lặp bước 2–3 cho mọi cặp (khoảng cách, $k$) và chọn cặp có trung bình cao nhất. Hòa thì giữ cặp gặp trước, tức $k$ nhỏ hơn.
+
+Chi tiết quan trọng: **mean/std chuẩn hóa được tính lại trên 4 phần train của từng fold**, không tính một lần trên cả 800 ảnh. Nếu tính trên cả 800 ảnh, thông tin của phần validation đã lọt vào bước chuẩn hóa, và accuracy CV lại bị lạc quan, giống lỗi ở trên nhưng ở quy mô nhỏ hơn.
+
+Sau khi chọn xong, chuẩn hóa lại trên toàn bộ 800 ảnh train và dự đoán 200 ảnh test **đúng một lần**.
+
+Chi phí: 2 khoảng cách × 10 giá trị $k$ × 5 fold = 100 lần chạy k-NN, mỗi lần 160 ảnh validation × 640 ảnh train. Toàn bộ chỉ mất vài giây.
 
 ## Chia tập phân tầng
 

@@ -16,5 +16,5 @@ Nên đọc theo thứ tự:
 Hình minh họa dùng trong tài liệu:
 
 - [`segmentation.png`](segmentation.png): ảnh gốc, mask, ảnh chồng mask cho mỗi giống
-- [`accuracy_k.png`](accuracy_k.png): accuracy theo $k$ với Euclidean và Manhattan
-- [`confusion_matrix.png`](confusion_matrix.png): ma trận nhầm lẫn với Manhattan, $k=5$
+- [`accuracy_k.png`](accuracy_k.png): accuracy cross-validation trên tập train theo $k$, Euclidean và Manhattan, `seed=42`
+- [`confusion_matrix.png`](confusion_matrix.png): ma trận nhầm lẫn trên test với cấu hình CV chọn (Manhattan, $k=7$, `seed=42`)

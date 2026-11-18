@@ -32,9 +32,11 @@ download_data.py       tải images.tar.gz, giải nén, lọc 5 giống vào da
 
 features/features.py   load ảnh, tiền xử lý, phân đoạn, trích đặc trưng
 dataset/dataset.py     duyệt data/<giống>/, trích đặc trưng hàng loạt, cache .npz
-knn/knn.py             khoảng cách, chuẩn hóa, chia tập, k-NN, accuracy, confusion matrix
-knn/evaluate.py        khảo sát mọi cặp (khoảng cách, k), in bảng kết quả
+knn/knn.py             khoảng cách, chuẩn hóa, chia tập, k-NN, accuracy, confusion matrix, precision/recall/F1
+knn/validation.py      k-fold phân tầng, cross-validation, chọn (khoảng cách, k)
+knn/evaluate.py        chọn tham số bằng CV, đánh giá trên test, lặp nhiều seed
 gui/app.py             desktop app CustomTkinter
+tests/                 unit test cho k-NN, cross-validation, chọn nhóm đặc trưng
 
 app.py, evaluate.py    điểm chạy ở thư mục gốc, chỉ gọi vào package tương ứng
 ```
@@ -65,14 +67,25 @@ vector 34 chiều
    │  load_or_extract     lặp 1.000 ảnh, lưu features_cache.npz
    ▼
 X (1000×34), y (1000)
-   │  stratified_split    800 train / 200 test, giữ tỷ lệ lớp
-   │  standardize_fit     mean, std tính trên train
+   │  select_feature_groups   giữ màu + hình học → 1000×27
+   │  stratified_split        800 train / 200 test, giữ tỷ lệ lớp
    ▼
-X_train, X_test đã chuẩn hóa
-   │  knn_predict_batch   với mỗi (khoảng cách, k)
-   ▼
-dự đoán ──► accuracy_score, confusion_matrix
+tập train (800)                         tập test (200)
+   │  select_params                        │
+   │    stratified_k_fold (5 fold)         │
+   │    cross_val_accuracy cho mọi         │
+   │    (khoảng cách, k)                   │
+   ▼                                       │
+(khoảng cách, k) tốt nhất                  │
+   │  standardize_fit trên 800 ảnh train   │
+   ▼                                       ▼
+knn_predict_batch ───────────────────► dự đoán trên test
+                                           │
+                                           ▼
+                      accuracy_score, confusion_matrix, per_class_metrics
 ```
+
+Tập test chỉ xuất hiện ở bước cuối. Mọi quyết định (chọn $k$, chọn khoảng cách, mean/std chuẩn hóa) đều chỉ dựa trên tập train.
 
 ## Thư viện dùng ở đâu
 

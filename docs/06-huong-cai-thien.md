@@ -4,47 +4,47 @@ Các hướng dưới đây dựa trên điểm yếu **đã đo được** ở 
 
 ## Tóm tắt
 
-| Ưu tiên | Hướng | Công sức | Lợi ích dự kiến |
+| Ưu tiên | Hướng | Trạng thái | Lợi ích |
 |---:|---|---|---|
-| 1 | Đánh giá đúng cách: chọn $k$ bằng cross-validation, báo cáo trung bình nhiều seed | Nhỏ | Con số đáng tin, so sánh cải tiến được |
-| 2 | Bỏ Hu moments, giảm trọng số hình dạng | Rất nhỏ | Khoảng +1–1.5 điểm (đã đo) |
-| 3 | Sửa đặc trưng màu: H dạng vòng tròn, lọc pixel tối/nhạt, thêm Lab | Vừa | Chưa đo; tác động trực tiếp lên nhóm đặc trưng mạnh nhất |
-| 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | Vừa–lớn | Biết được trần cải thiện; có thể lớn nhất |
-| 5 | Cải tiến k-NN: vote theo khoảng cách, khoảng cách chi-square cho histogram | Nhỏ | Nhỏ đến vừa |
-| 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Nhỏ | Dễ thử nghiệm, dễ viết báo cáo |
+| 1 | Đánh giá đúng cách: chọn $k$ bằng cross-validation, báo cáo trung bình nhiều seed | **Đã làm** | Con số không thiên lệch: 59.3% ± 3.6 |
+| 2 | Bỏ Hu moments | **Đã làm** | Vector gọn hơn; accuracy không đổi trong ngưỡng dao động |
+| 3 | Sửa đặc trưng màu: H dạng vòng tròn, lọc pixel tối/nhạt, thêm Lab | Chưa | Chưa đo; tác động trực tiếp lên nhóm đặc trưng mạnh nhất |
+| 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | Chưa | Biết được trần cải thiện; có thể lớn nhất |
+| 5 | Cải tiến k-NN: vote theo khoảng cách, khoảng cách chi-square cho histogram | Chưa | Nhỏ đến vừa |
+| 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Một phần | Dễ thử nghiệm, dễ viết báo cáo |
+
+Với độ dao động ±3.6 điểm giữa các cách chia, mọi cải tiến ở các mục 3–5 cần tăng **rõ hơn khoảng 3–4 điểm** trung bình 10 seed thì mới coi là thật sự có lợi.
 
 ---
 
-## 1. Đánh giá đúng cách
+## 1. Đánh giá đúng cách — đã làm
 
-**Vấn đề.** `knn/evaluate.py` chọn cặp (khoảng cách, $k$) tốt nhất **dựa trên tập test**, rồi báo cáo accuracy trên chính tập test đó. Đây là rò rỉ dữ liệu: tập test đã được dùng để chọn mô hình nên không còn là dữ liệu "chưa thấy". Thêm vào đó, kết quả với một seed dao động ±2–3 điểm (từ 51% đến 59.5%), lớn hơn nhiều cải tiến nhỏ muốn so sánh.
+**Vấn đề cũ.** Phiên bản đầu chọn cặp (khoảng cách, $k$) tốt nhất **dựa trên tập test**, rồi báo cáo accuracy trên chính tập test đó. Đây là rò rỉ dữ liệu: tập test đã được dùng để chọn mô hình nên không còn là dữ liệu "chưa thấy". Ngoài ra chỉ có một seed, trong khi kết quả dao động vài điểm giữa các cách chia.
 
-**Cách làm.**
+**Đã thay bằng:**
 
-1. Viết hàm `k_fold_indices(y, n_folds=5, seed)` chia **tập train** thành 5 phần phân tầng.
-2. Với mỗi cặp (khoảng cách, $k$): train trên 4 phần, đánh giá trên phần còn lại, lặp 5 lần, lấy trung bình. Nhớ tính mean/std chuẩn hóa **trên 4 phần train của từng fold**.
-3. Chọn cặp có accuracy cross-validation cao nhất.
-4. Chỉ khi đó mới chạy một lần duy nhất trên tập test và báo cáo con số này.
-5. Lặp toàn bộ quy trình với nhiều seed, báo cáo trung bình ± độ lệch chuẩn.
+- `knn/validation.py`: `stratified_k_fold`, `cross_val_accuracy` (chuẩn hóa lại trong từng fold), `select_params`.
+- `knn/evaluate.py`: chọn tham số bằng CV 5 fold trên train, đánh giá test một lần, lặp 10 seed; các tham số `--seed`, `--folds`, `--repeats`, `--features`.
+- `per_class_metrics`: precision, recall, F1 theo lớp.
+- Dải $k$ mở rộng tới 25, vì với dải cũ (tới 11) CV thường chọn đúng giá trị lớn nhất, dấu hiệu $k$ tốt nhất nằm ngoài dải. Thử thêm tới $k=61$ cho thấy đường CV đạt đỉnh quanh $k=25$ rồi giảm.
 
-**Tại sao làm trước.** Không có bước này thì không phân biệt được một cải tiến thật với dao động ngẫu nhiên do cách chia tập.
+**Kết quả:** 59.3% ± 3.6 (10 seed). Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
 
-Nên báo cáo thêm **precision, recall, F1 theo từng lớp** (tính được trực tiếp từ ma trận nhầm lẫn), vì accuracy chung che mất việc Egyptian Mau chỉ đạt 45%.
+**Phát hiện phụ:** cách đánh giá cũ đã che mất đóng góp của 5 đặc trưng hình học. Ở $k=5$ cố định chúng không giúp gì; khi CV được chọn $k$ lớn hơn, chúng thêm khoảng 3.7 điểm.
 
-## 2. Bỏ Hu moments và giảm trọng số hình dạng
+## 2. Bỏ Hu moments — đã làm
 
-**Bằng chứng.** Hu moments một mình chỉ đạt 26.8%, gần mức đoán bừa. Bỏ chúng tăng accuracy từ 55.5% lên 57.0%. Giảm trọng số cả nhóm hình dạng xuống 0.25 cho 56.9%.
+**Bằng chứng (theo quy trình CV, 10 seed):** Hu moments một mình đạt 25.9%, gần mức đoán bừa. Màu + hình học + Hu đạt 58.8% ± 2.7; bỏ Hu đạt 59.3% ± 3.6.
 
-**Cách làm.**
+**Đã làm:** Hu vẫn được trích và lưu trong cache, nhưng `DEFAULT_FEATURE_GROUPS` trong `config.py` chỉ gồm `color` và `geometry`; cả `evaluate.py` và app đều dùng mặc định này. Vẫn thêm lại được bằng `--features color,geometry,hu` để so sánh.
 
-- Đơn giản nhất: không đưa 7 chiều Hu vào vector (sửa `_shape_features` trong `features/features.py`), tăng `CACHE_VERSION`.
-- Hoặc giữ lại nhưng thêm vector trọng số theo nhóm, nhân vào sau bước chuẩn hóa. Trọng số chọn bằng cross-validation ở mục 1.
+**Lưu ý khi trình bày:** chênh lệch 0.5 điểm nằm trong độ dao động. Lý do bỏ Hu là chúng **không mang thông tin hữu ích** (gần mức đoán bừa khi dùng riêng), không phải vì bỏ đi làm tăng accuracy.
 
-**Đưa vào báo cáo.** Bảng ablation (chỉ màu / chỉ hình dạng / cả hai) là một phân tích có giá trị, trả lời câu hỏi "đặc trưng nào thực sự có ích", và phù hợp với yêu cầu khảo sát của đề.
+**Còn có thể thử:** đánh trọng số theo nhóm đặc trưng (ví dụ nhân nhóm hình học với hệ số $w$ sau chuẩn hóa) và chọn $w$ bằng CV.
 
 ## 3. Cải thiện đặc trưng màu
 
-Màu là nhóm mang gần như toàn bộ thông tin, nên cải thiện ở đây có tác động trực tiếp nhất.
+Màu là nhóm mang phần lớn thông tin (một mình đạt 55.6%), nên cải thiện ở đây có tác động trực tiếp nhất.
 
 ### 3a. Xử lý H như đại lượng vòng tròn
 
@@ -70,7 +70,7 @@ Thay vì hai histogram 1D riêng cho H và S, dùng histogram 2D (ví dụ 8×3 
 
 ### 3e. (Ngoài phạm vi đề) Đặc trưng kết cấu
 
-Egyptian Mau bị nhầm nhiều nhất vì đặc điểm phân biệt của nó là **đốm**, tức là kết cấu chứ không phải màu hay hình dạng. Một histogram LBP (Local Binary Pattern) hoặc thống kê từ ma trận đồng xuất hiện mức xám (GLCM) sẽ mô tả được đốm. Đề chỉ yêu cầu màu và hình dạng, nên nếu thêm thì trình bày như một **thí nghiệm mở rộng**, so sánh có và không có kết cấu.
+Cặp nhầm lẫn lớn nhất là Egyptian Mau ↔ Sphynx, và Mau còn hay bị nhầm với Samoyed. Đặc điểm phân biệt của Mau là **đốm**, tức là kết cấu chứ không phải màu hay hình dạng. Một histogram LBP (Local Binary Pattern) hoặc thống kê từ ma trận đồng xuất hiện mức xám (GLCM) sẽ mô tả được đốm. Đề chỉ yêu cầu màu và hình dạng, nên nếu thêm thì trình bày như một **thí nghiệm mở rộng**, so sánh có và không có kết cấu.
 
 ## 4. Đo và cải thiện phân đoạn
 
@@ -106,12 +106,12 @@ Các thay đổi nhỏ trong `knn/knn.py`, phù hợp với yêu cầu "khảo s
 
   Phù hợp với histogram hơn L1/L2 vì nó coi chênh lệch ở bin nhỏ là quan trọng hơn. Lưu ý chi-square tính trên histogram **chưa** chuẩn hóa z-score.
 - **Khoảng cách cosine:** chỉ quan tâm hướng của vector, bỏ qua độ lớn. Thêm vào bảng khảo sát để so sánh.
-- **Khảo sát $k$ rộng hơn:** khi chỉ dùng màu, $k=15$ còn tốt hơn $k=11$. Nên khảo sát tới khoảng $k=25$.
+- ~~**Khảo sát $k$ rộng hơn**~~ — đã làm cùng mục 1: dải $k$ hiện tới 25.
 
 ## 6. Cải tiến kỹ thuật
 
-- **Unit test** cho `knn/knn.py` với dữ liệu tự tạo (hai cụm điểm tách rời phải đạt 100%, vote hòa phải chọn đúng lớp gần hơn). Đảm bảo phần tự cài không có lỗi khi sửa sau này.
-- **Tham số dòng lệnh** cho `evaluate.py`: `--seed`, `--k`, `--metric`, `--features color,shape`. Hiện các thí nghiệm bổ sung trong [05-danh-gia.md](05-danh-gia.md) phải chạy bằng đoạn code riêng.
+- ~~**Unit test**~~ — đã làm: `tests/` kiểm tra k-NN, phá hòa, chuẩn hóa, chia tập, cross-validation, metric và chọn nhóm đặc trưng (`python -m pytest`).
+- ~~**Tham số dòng lệnh**~~ — đã làm: `--seed`, `--folds`, `--repeats`, `--features`.
 - **Xuất kết quả tự động**: `evaluate.py` ghi bảng accuracy ra JSON và vẽ lại `docs/accuracy_k.png`, `docs/confusion_matrix.png`, để README luôn khớp với code.
 - **Vector hóa đánh giá:** tính cả ma trận khoảng cách test × train trong một lệnh thay vì lặp từng ảnh. Không cần với 1.000 ảnh, nhưng hữu ích nếu mở rộng lên cả 37 giống (khoảng 7.400 ảnh).
 - **Hiển thị trong app** các ảnh láng giềng gần nhất (không chỉ tên và khoảng cách), để thấy trực quan vì sao k-NN dự đoán như vậy. Rất có ích khi thuyết trình.
@@ -120,8 +120,8 @@ Các thay đổi nhỏ trong `knn/knn.py`, phù hợp với yêu cầu "khảo s
 
 Nếu thời gian có hạn, thứ tự sau cho nhiều giá trị nhất cho báo cáo:
 
-1. Mục 1 (cross-validation, nhiều seed) — để mọi con số sau đó đáng tin.
-2. Mục 2 (bỏ Hu) và đưa bảng ablation vào báo cáo.
+1. ~~Mục 1 (cross-validation, nhiều seed)~~ — đã làm.
+2. ~~Mục 2 (bỏ Hu)~~ — đã làm; bảng ablation có trong [05-danh-gia.md](05-danh-gia.md), nên đưa vào báo cáo.
 3. Mục 4a (IoU và thí nghiệm oracle với trimap) — trả lời được "lỗi nằm ở đâu".
 4. Mục 3a và 3b (sửa kênh H) — cải tiến nhỏ, có cơ sở lý thuyết rõ.
 5. Mục 5 (vote theo khoảng cách, chi-square) — mở rộng phần khảo sát khoảng cách.
