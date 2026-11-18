@@ -12,9 +12,21 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from PIL import Image
 
-from config import DISPLAY_NAMES, K_CHOICES, METRIC_LABELS, SELECTED_BREEDS
+from config import (
+    DEFAULT_FEATURE_GROUPS,
+    DISPLAY_NAMES,
+    K_CHOICES,
+    METRIC_LABELS,
+    SELECTED_BREEDS,
+)
 from dataset import load_feature_cache, load_or_extract
-from features import features_and_preview, load_bgr, overlay_mask, segment_pet
+from features import (
+    features_and_preview,
+    load_bgr,
+    overlay_mask,
+    segment_pet,
+    select_feature_groups,
+)
 from knn import (
     accuracy_score,
     confusion_matrix,
@@ -108,8 +120,8 @@ class PetClassifierApp(ctk.CTk):
         self.k_slider = ctk.CTkSlider(
             side,
             from_=1,
-            to=11,
-            number_of_steps=10,
+            to=max(K_CHOICES),
+            number_of_steps=max(K_CHOICES) - 1,
             command=self._on_k_change,
         )
         self.k_slider.set(5)
@@ -231,6 +243,7 @@ class PetClassifierApp(ctk.CTk):
         )
 
     def _store_dataset(self, X, y, paths):
+        X = select_feature_groups(X, DEFAULT_FEATURE_GROUPS)
         self.X, self.y, self.paths = X, y, paths
         self.train_idx, self.test_idx = stratified_split(y, test_ratio=0.2, seed=42)
         self.mean, self.std = standardize_fit(X[self.train_idx])
@@ -268,6 +281,7 @@ class PetClassifierApp(ctk.CTk):
             vector, img, preview = features_and_preview(self.current_path)
             self._show_bgr(self.orig_label, img, "orig")
             self._show_bgr(self.seg_label, preview, "seg")
+            vector = select_feature_groups(vector, DEFAULT_FEATURE_GROUPS)
             x = standardize_apply(vector[None, :], self.mean, self.std)[0]
             X_train = standardize_apply(self.X[self.train_idx], self.mean, self.std)
             y_train = self.y[self.train_idx]
@@ -302,10 +316,11 @@ class PetClassifierApp(ctk.CTk):
     def _eval_worker(self, force, metric, active_k):
         try:
             X, y, paths = load_or_extract(progress=self._progress_from_thread, force=force)
+            X_used = select_feature_groups(X, DEFAULT_FEATURE_GROUPS)
             train_idx, test_idx = stratified_split(y, test_ratio=0.2, seed=42)
-            mean, std = standardize_fit(X[train_idx])
-            X_train = standardize_apply(X[train_idx], mean, std)
-            X_test = standardize_apply(X[test_idx], mean, std)
+            mean, std = standardize_fit(X_used[train_idx])
+            X_train = standardize_apply(X_used[train_idx], mean, std)
+            X_test = standardize_apply(X_used[test_idx], mean, std)
             y_train, y_test = y[train_idx], y[test_idx]
 
             k_scores = []
@@ -354,8 +369,9 @@ class PetClassifierApp(ctk.CTk):
             f"Tập: {payload['n_train']} train · {payload['n_test']} test · 5 lớp",
             f"Khoảng cách: {payload['metric']} · k đang chọn = {payload['active_k']}",
             f"Accuracy (k={payload['active_k']}): {payload['acc'] * 100:.2f}%",
-            f"k tốt nhất trên test: k={payload['best_k']} "
-            f"({max(payload['k_scores']) * 100:.2f}%)",
+            f"k cho accuracy test cao nhất: k={payload['best_k']} "
+            f"({max(payload['k_scores']) * 100:.2f}%) · chỉ để minh họa, "
+            "k chính thức được chọn bằng cross-validation trong evaluate.py",
             "Accuracy theo k: "
             + "  ".join(
                 f"k={k}:{s * 100:.1f}%" for k, s in zip(K_CHOICES, payload["k_scores"])

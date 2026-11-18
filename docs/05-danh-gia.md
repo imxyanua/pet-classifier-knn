@@ -1,121 +1,129 @@
 # 5. Đánh giá
 
-Code: [`knn/evaluate.py`](../knn/evaluate.py), hàm `accuracy_score` và `confusion_matrix` trong [`knn/knn.py`](../knn/knn.py).
+Code: [`knn/evaluate.py`](../knn/evaluate.py); các hàm metric trong [`knn/knn.py`](../knn/knn.py); cross-validation trong [`knn/validation.py`](../knn/validation.py).
 
-## Cách đánh giá
+## Quy trình
 
-- 1.000 ảnh, chia phân tầng 800 train / 200 test với `seed=42` (mỗi giống 160 / 40).
-- Chuẩn hóa z-score bằng mean/std của tập train.
-- Chạy k-NN với mọi cặp (khoảng cách, $k$): Euclidean và Manhattan, $k$ = 1, 3, 5, 7, 9, 11.
+1. Chia 1.000 ảnh thành 800 train / 200 test, phân tầng (mỗi giống 160 / 40).
+2. Trên 800 ảnh train, chạy cross-validation 5 fold cho mọi cặp khoảng cách (Euclidean, Manhattan) × $k$ (1, 3, 5, 7, 9, 11, 13, 15, 19, 25). Chọn cặp có accuracy CV cao nhất.
+3. Chuẩn hóa trên 800 ảnh train, chạy k-NN với cặp đã chọn, đánh giá **một lần** trên 200 ảnh test.
+4. Lặp bước 1–3 với seed 0–9 (10 cách chia khác nhau), báo cáo trung bình ± độ lệch chuẩn.
 
-### Độ chính xác
+Lý do của từng bước được giải thích ở [04-knn.md](04-knn.md), mục "Chọn k bằng cross-validation". Tóm tắt: tập test không tham gia vào bất kỳ quyết định nào, nên accuracy trên test là ước lượng không thiên lệch cho ảnh mới. Lặp nhiều seed cho biết con số đó dao động bao nhiêu.
+
+Đặc trưng mặc định: màu + hình học, 27 chiều (xem [03-dac-trung.md](03-dac-trung.md)).
+
+### Các thước đo
+
+**Accuracy**
 
 $$\text{accuracy} = \frac{\text{số ảnh dự đoán đúng}}{\text{tổng số ảnh test}}$$
 
-Vì 5 lớp cân bằng (mỗi lớp 40 ảnh test), accuracy là thước đo hợp lý. Mốc so sánh: đoán ngẫu nhiên đạt 20%.
+5 lớp cân bằng (mỗi lớp 40 ảnh test) nên accuracy là thước đo hợp lý. Mốc so sánh: đoán ngẫu nhiên đạt 20%.
 
-### Ma trận nhầm lẫn
+**Ma trận nhầm lẫn**
 
 Ma trận $C$ kích thước 5×5, $C_{ij}$ là số ảnh **thực tế** thuộc lớp $i$ nhưng **dự đoán** là lớp $j$.
 
 - Đường chéo: dự đoán đúng. Tổng mỗi hàng bằng 40.
 - Ngoài đường chéo: cho biết **cặp lớp nào hay bị nhầm**, và theo chiều nào.
-- Recall của lớp $i$ = $C_{ii} / \sum_j C_{ij}$ (đúng bao nhiêu trong số ảnh thật của lớp đó).
-- Precision của lớp $j$ = $C_{jj} / \sum_i C_{ij}$ (đúng bao nhiêu trong số ảnh bị đoán là lớp đó).
+
+**Precision, recall, F1 theo lớp** (hàm `per_class_metrics`)
+
+- Recall của lớp $i$ = $C_{ii} / \sum_j C_{ij}$: trong số ảnh thật của lớp $i$, đoán đúng bao nhiêu.
+- Precision của lớp $j$ = $C_{jj} / \sum_i C_{ij}$: trong số ảnh bị đoán là lớp $j$, đúng bao nhiêu.
+- F1 = $2 \cdot \text{precision} \cdot \text{recall} / (\text{precision} + \text{recall})$: trung bình điều hòa của hai giá trị trên.
+
+Accuracy chung có thể che mất một lớp yếu; các thước đo theo lớp chỉ ra chính xác lớp nào yếu và yếu theo kiểu nào (bị bỏ sót hay bị nhận nhầm).
 
 ## Kết quả chính
 
-| Khoảng cách | k=1 | k=3 | k=5 | k=7 | k=9 | k=11 |
-|---|---:|---:|---:|---:|---:|---:|
-| Euclidean | 54.0% | 55.5% | 57.5% | 53.0% | 54.5% | 52.5% |
-| Manhattan | 55.5% | 55.5% | **58.0%** | **58.0%** | 55.5% | 56.5% |
+| | Accuracy trên test |
+|---|---:|
+| Trung bình 10 seed | **59.3% ± 3.6%** |
+| Thấp nhất / cao nhất | 54.5% / 68.0% |
+| `seed=42` | 59.0% |
 
-![Accuracy theo k](accuracy_k.png)
+CV chọn **Manhattan ở cả 10 seed**. Giá trị $k$ được chọn: 25 (5 lần), 13 (2), 15 (2), 19 (1).
 
-Cấu hình tốt nhất: **Manhattan, $k=5$, 58.0%**.
+Khoảng dao động 54.5%–68.0% là lớn. Nguyên nhân chính là tập test nhỏ: với 200 ảnh, mỗi ảnh đúng/sai thay đổi accuracy 0.5 điểm, và việc ảnh "khó" (phân đoạn lỗi) rơi vào test nhiều hay ít phụ thuộc may rủi. Vì vậy **chênh lệch dưới khoảng 3–4 điểm giữa hai phương án không đủ để kết luận phương án nào tốt hơn**.
 
-### Ảnh hưởng của khoảng cách
+### Ảnh hưởng của k và khoảng cách
 
-Manhattan tốt hơn hoặc bằng Euclidean ở cả 6 giá trị $k$, chênh lệch lớn nhất ở $k=7$ (58.0% so với 53.0%). Đường Manhattan cũng ít dao động hơn. Lý do: vector có một số chiều nhiễu (Hu moments, xem bên dưới), và L2 bình phương độ lệch nên các chiều nhiễu này bị khuếch đại.
+![Accuracy CV theo k](accuracy_k.png)
 
-### Ảnh hưởng của k
+Accuracy cross-validation trên 800 ảnh train với `seed=42`:
 
-- $k=1$ không phải tốt nhất với cả hai khoảng cách: một láng giềng duy nhất quá nhạy với ảnh phân đoạn lỗi.
-- Đỉnh ở $k$ = 5–7.
-- Với Euclidean, $k$ lớn hơn 5 làm accuracy giảm, vì láng giềng xa bắt đầu đến từ lớp khác.
+| $k$ | 1 | 3 | 5 | 7 | 9 | 11 | 13 | 15 | 19 | 25 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Euclidean | 49.5 | 53.9 | 54.0 | 55.9 | 55.8 | 56.4 | 57.4 | 56.8 | 55.9 | 55.4 |
+| Manhattan | 51.3 | 55.1 | 56.6 | **58.4** | 57.4 | 57.6 | 57.8 | 58.3 | 57.9 | **58.4** |
+
+- **Manhattan tốt hơn Euclidean ở mọi $k$.** L2 bình phương độ lệch nên một chiều lệch lớn chi phối cả khoảng cách; L1 cộng tuyến tính nên các chiều đóng góp đều hơn. Với vector trộn màu và hình học, nơi một vài chiều có thể nhiễu do phân đoạn lỗi, L1 bền hơn.
+- **$k$ nhỏ kém rõ rệt.** $k=1$ thấp hơn đỉnh khoảng 7 điểm: một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn sai hoặc ảnh lạ.
+- **Với Manhattan, đường gần như phẳng từ $k=7$ đến $k=25$** (dao động trong khoảng 1 điểm). Đó là lý do CV chọn $k$ khác nhau giữa các seed: các giá trị này gần như tương đương, và sai số ngẫu nhiên quyết định cái nào nhỉnh hơn.
+- **Với Euclidean, đạt đỉnh ở $k=13$ rồi giảm**: láng giềng xa bắt đầu đến từ lớp khác.
+
+Với `seed=42`, $k=7$ và $k=25$ hòa nhau (58.38%), CV giữ $k=7$ vì gặp trước.
 
 ## Đọc ma trận nhầm lẫn
 
 ![Ma trận nhầm lẫn](confusion_matrix.png)
 
-| Giống | Đúng / 40 | Recall | Hay bị nhầm thành |
-|---|---:|---:|---|
-| Bombay | 29 | 72.5% | Pug (7) |
-| Samoyed | 27 | 67.5% | Egyptian Mau (4), Sphynx (4) |
-| Pug | 22 | 55.0% | Samoyed (7), Bombay (6), Sphynx (5) |
-| Sphynx | 20 | 50.0% | Pug (7), Egyptian Mau (5) |
-| Egyptian Mau | 18 | 45.0% | Samoyed (9), Sphynx (8) |
+`seed=42`, Manhattan, $k=7$, accuracy 59.0%:
+
+| Giống | Đúng / 40 | Precision | Recall | F1 | Hay bị nhầm thành |
+|---|---:|---:|---:|---:|---|
+| Bombay | 28 | 71.8% | 70.0% | **70.9%** | Pug (8) |
+| Samoyed | 26 | 60.5% | 65.0% | 62.7% | Egyptian Mau (5), Pug (4) |
+| Pug | 23 | 53.5% | 57.5% | 55.4% | Bombay (5), Sphynx (5) |
+| Egyptian Mau | 21 | 53.8% | 52.5% | 53.2% | Samoyed (7), Sphynx (6) |
+| Sphynx | 20 | 55.6% | 50.0% | 52.6% | Egyptian Mau (8), Samoyed (6) |
 
 Giải thích:
 
-- **Bombay tốt nhất** vì lông đen tuyền cho $\mu_V$ thấp hẳn các giống khác. Khi nhầm, Bombay thường bị nhầm thành Pug, có lẽ vì mặt Pug đen và mask Pug thường chỉ lấy phần mặt.
-- **Samoyed** tách tốt nhờ V cao, S thấp.
-- **Egyptian Mau kém nhất.** Lông xám bạc có S thấp, V khá cao, giống Samoyed về màu. Đặc trưng phân biệt chính của Mau là **đốm**, tức là kết cấu (texture), mà vector hiện tại không mô tả.
-- **Pug ↔ Sphynx** nhầm lẫn hai chiều (5 và 7): cả hai có tông màu da/kem tương tự, và lỗi phân đoạn ở cả hai giống làm đặc trưng thêm nhiễu.
+- **Bombay tốt nhất** nhờ lông đen tuyền cho $\mu_V$ thấp hẳn các giống khác. Khi sai, Bombay hay bị đoán là Pug, có lẽ vì mặt Pug đen và mask Pug thường chỉ lấy được phần mặt.
+- **Sphynx ↔ Egyptian Mau** là cặp nhầm lẫn lớn nhất (8 và 6 ảnh). Cả hai có tông xám/nhạt, dáng mảnh, tai to. Nét phân biệt chính của Mau là **đốm**, tức kết cấu, mà vector hiện tại không mô tả.
+- **Egyptian Mau ↔ Samoyed** (7 và 5): lông xám bạc của Mau có S thấp, V khá cao, gần với lông trắng của Samoyed.
+- **Pug** có precision thấp nhất trong nhóm chó (53.5%): nhiều ảnh của giống khác bị đoán là Pug (8 Bombay, 5 Sphynx, 4 Samoyed). Mask Pug thường không đầy đủ nên đặc trưng của Pug trải rộng, "hút" các ảnh lạ về phía nó.
 
-## Thí nghiệm bổ sung
+## Đóng góp của từng nhóm đặc trưng (ablation)
 
-Các thí nghiệm dưới đây dùng lại cache đặc trưng, Manhattan, và lặp lại với **10 seed chia tập khác nhau** (0–9) để có trung bình và độ lệch chuẩn thay vì một con số duy nhất.
+Cùng quy trình (CV chọn tham số, 10 seed), chỉ thay đổi nhóm đặc trưng:
 
-### Độ ổn định của kết quả
+```bash
+python evaluate.py --features color,geometry,hu
+python evaluate.py --features color
+...
+```
 
-Với Manhattan, $k=5$, đủ 34 chiều: **55.5% ± 2.3%** (thấp nhất 51.0%, cao nhất 59.5%).
-
-Con số 58.0% với `seed=42` nằm ở phía trên của khoảng này. Ngoài ra $k$ đang được chọn dựa trên chính tập test, nên 58.0% là ước lượng hơi lạc quan. Con số đáng tin hơn để báo cáo là **khoảng 55–56%**.
-
-### Đóng góp của từng nhóm đặc trưng (ablation)
-
-| Đặc trưng dùng | Số chiều | Accuracy (10 seed) |
+| Đặc trưng | Số chiều | Accuracy test (10 seed) |
 |---|---:|---:|
-| Chỉ hình dạng | 12 | 29.1% ± 1.7 |
-| — chỉ Hu moments | 7 | 26.8% ± 2.8 |
-| — chỉ 5 đặc trưng hình học | 5 | 31.8% ± 2.9 |
-| Chỉ màu | 22 | 55.5% ± 3.4 |
-| Màu + hình dạng | 34 | 55.5% ± 2.3 |
-| Màu + 5 hình học (bỏ Hu) | 27 | **57.0% ± 2.4** |
+| Màu + hình học + Hu | 34 | 58.8% ± 2.7 |
+| **Màu + hình học (mặc định)** | 27 | **59.3% ± 3.6** |
+| Chỉ màu | 22 | 55.6% ± 3.2 |
+| Hình học + Hu | 12 | 29.1% ± 3.3 |
+| Chỉ hình học | 5 | 31.2% ± 3.3 |
+| Chỉ Hu moments | 7 | 25.9% ± 2.5 |
 
 Kết luận:
 
-- **Màu mang gần như toàn bộ thông tin.** Chỉ dùng màu đã đạt mức của cả vector.
-- **Hình dạng một mình gần mức đoán ngẫu nhiên** (29% so với 20%). Lý do đã phân tích ở [03-dac-trung.md](03-dac-trung.md): tư thế và lỗi phân đoạn làm hình dạng trong cùng một giống thay đổi quá nhiều.
-- **Hu moments gây nhiễu.** Bỏ Hu moments tăng khoảng 1.5 điểm. Chênh lệch này nhỏ hơn độ lệch chuẩn nên chưa thể khẳng định chắc chắn, nhưng xu hướng nhất quán với việc Hu một mình chỉ đạt 26.8%.
-- Hình dạng có giảm độ dao động (độ lệch chuẩn 2.3 so với 3.4 khi chỉ dùng màu), tức là giúp kết quả ổn định hơn dù không tăng trung bình.
+- **Màu mang phần lớn thông tin.** Chỉ màu đã đạt 55.6%.
+- **5 đặc trưng hình học bổ sung khoảng 3.7 điểm** khi gộp với màu, dù một mình chỉ đạt 31%. Hai nhóm mang thông tin khác nhau: màu cho biết "lông màu gì", hình học cho biết "dáng tròn hay mảnh".
+- **Hu moments không có ích.** Một mình gần mức đoán bừa (25.9% so với 20%), và thêm vào không tăng accuracy. Chúng bị bỏ khỏi bộ mặc định vì làm vector dài hơn mà không mang thêm thông tin. Mức chênh 58.8% so với 59.3% nằm trong độ dao động, nên **không** được coi là bằng chứng bỏ Hu làm tăng accuracy.
 
-### Trọng số nhóm hình dạng
+### So với cách đánh giá cũ
 
-Nhân các chiều hình dạng với hệ số $w$ sau chuẩn hóa (màu giữ hệ số 1):
+Phiên bản đầu tiên chọn $k$ trực tiếp trên tập test với một seed duy nhất và chỉ thử $k \le 11$. Cách đó cho 58.0% (Manhattan, $k=5$) và dẫn tới kết luận sai rằng "hình dạng gần như không giúp": ở $k=5$ cố định, màu + hình dạng và chỉ màu cho cùng 55.5%. Khi cho phép CV chọn $k$ lớn hơn, lợi ích của hình học mới lộ ra, có lẽ vì vote trên nhiều láng giềng làm mượt nhiễu của từng chiều hình dạng.
 
-| $w$ | Accuracy (10 seed) |
-|---:|---:|
-| 0 (bỏ hình dạng) | 55.5% ± 3.4 |
-| 0.25 | **56.9% ± 3.6** |
-| 0.5 | 56.1% ± 3.5 |
-| 1 (hiện tại) | 55.5% ± 2.3 |
-
-Giảm trọng số hình dạng giúp một chút, cho thấy hình dạng có ích ở mức nhỏ nhưng đang bị cho trọng số quá lớn so với lượng thông tin nó mang.
-
-### k tối ưu khi chỉ dùng màu
-
-| $k$ | 1 | 3 | 5 | 7 | 9 | 11 | 15 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Accuracy | 50.2% | 52.8% | 55.5% | 56.5% | 56.0% | 57.2% | **57.5%** |
-
-Khi vector ít nhiễu hơn, $k$ lớn hơn lại tốt hơn: vote trên nhiều láng giềng làm mượt sai số của từng ảnh phân đoạn lỗi. Vì vậy $k$ tối ưu phụ thuộc vào bộ đặc trưng và phải được chọn lại mỗi khi đổi đặc trưng.
+Bài học: một cấu hình cố định có thể che mất đóng góp của một nhóm đặc trưng. So sánh đặc trưng nên được làm **sau khi** chọn siêu tham số riêng cho từng phương án.
 
 ## Tái tạo các con số
 
 ```bash
-python evaluate.py
+python evaluate.py                                # kết quả chính và bảng CV
+python evaluate.py --features color,geometry,hu   # một dòng trong bảng ablation
+python evaluate.py --repeats 0                     # chỉ chạy seed=42, bỏ phần lặp
 ```
 
-in bảng kết quả chính và ma trận nhầm lẫn. Các thí nghiệm bổ sung chạy trên `features_cache.npz` bằng cách chọn cột của `X` (0–21 màu, 22–26 hình học, 27–33 Hu) rồi gọi lại các hàm trong `knn/knn.py` với `seed` từ 0 đến 9.
+Lần đầu mất 1–2 phút để trích đặc trưng; các lần sau dùng cache, mỗi lần chạy khoảng 30 giây.

@@ -8,6 +8,23 @@ HUE_BINS = 8
 SAT_BINS = 4
 VAL_BINS = 4
 
+COLOR_DIMS = 6 + HUE_BINS + SAT_BINS + VAL_BINS
+GEOMETRY_DIMS = 5
+HU_DIMS = 7
+FEATURE_GROUPS = {
+    "color": slice(0, COLOR_DIMS),
+    "geometry": slice(COLOR_DIMS, COLOR_DIMS + GEOMETRY_DIMS),
+    "hu": slice(COLOR_DIMS + GEOMETRY_DIMS, COLOR_DIMS + GEOMETRY_DIMS + HU_DIMS),
+}
+
+
+def select_feature_groups(X, groups):
+    """Lấy các cột thuộc những nhóm đặc trưng đã chọn; X có thể là 1 vector hoặc ma trận."""
+    unknown = [g for g in groups if g not in FEATURE_GROUPS]
+    if unknown:
+        raise ValueError(f"Nhóm đặc trưng không hợp lệ: {', '.join(unknown)}")
+    return np.concatenate([X[..., FEATURE_GROUPS[g]] for g in groups], axis=-1)
+
 
 def load_bgr(path):
     data = np.fromfile(path, dtype=np.uint8)

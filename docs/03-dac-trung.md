@@ -16,6 +16,8 @@ Mỗi ảnh được biểu diễn bằng một vector 34 chiều:
 
 Chiều 0–21 là **màu**, 22–33 là **hình dạng**.
 
+Cả 34 chiều đều được trích và lưu trong cache, nhưng **mặc định chỉ dùng 27 chiều đầu** (màu + hình học); Hu moments bị bỏ. Danh sách nhóm dùng mặc định nằm ở `DEFAULT_FEATURE_GROUPS` trong [`config.py`](../config.py), vị trí từng nhóm ở `FEATURE_GROUPS` trong [`features/features.py`](../features/features.py).
+
 ## Đặc trưng màu
 
 ### Vì sao dùng HSV
@@ -100,10 +102,18 @@ $$h_i' = -\text{sign}(h_i) \cdot \log_{10}(|h_i| + 10^{-12})$$
 
 ### Hạn chế của đặc trưng hình dạng
 
-Ý tưởng là phân biệt dáng tròn (Pug) với dáng mảnh (Sphynx). Trên thực tế, thí nghiệm ở [05-danh-gia.md](05-danh-gia.md) cho thấy nhóm này **gần như không giúp phân loại**:
+Ý tưởng là phân biệt dáng tròn (Pug) với dáng mảnh (Sphynx). Thí nghiệm ở [05-danh-gia.md](05-danh-gia.md) cho thấy:
+
+- **Một mình hình dạng rất yếu:** 5 đặc trưng hình học đạt khoảng 31%, Hu moments khoảng 26%, so với 20% của đoán bừa.
+- **5 đặc trưng hình học vẫn có ích khi gộp với màu:** thêm khoảng 3.7 điểm so với chỉ dùng màu.
+- **Hu moments không có ích:** gộp thêm vào không tăng accuracy, nên bị bỏ khỏi bộ mặc định.
+
+Lý do hình dạng yếu:
 
 - cùng một giống nhưng nằm, ngồi, đứng cho contour hoàn toàn khác nhau,
 - ảnh chỉ chụp mặt và ảnh chụp toàn thân cho hình dạng khác hẳn,
 - lỗi phân đoạn (thiếu thân, dính nền) làm contour sai trực tiếp.
 
-Nói cách khác, sự khác biệt hình dạng **trong** một giống lớn hơn sự khác biệt **giữa** các giống. Đặc trưng hình dạng toàn cục phù hợp hơn với bài toán vật thể cứng, có tư thế cố định (lá cây, linh kiện, chữ số), không phù hợp với động vật.
+Nói cách khác, sự khác biệt hình dạng **trong** một giống lớn hơn sự khác biệt **giữa** các giống. Đặc trưng hình dạng toàn cục phù hợp hơn với bài toán vật thể cứng, có tư thế cố định (lá cây, linh kiện, chữ số).
+
+Hu moments chịu ảnh hưởng nặng nhất vì chúng mô tả chi tiết phân bố khối của toàn bộ mask: chỉ cần đuôi hay chân bị cắt mất là giá trị thay đổi lớn. 5 đặc trưng hình học thô hơn (tỷ lệ khung, độ đặc, độ tròn) nên ít nhạy với các lỗi nhỏ đó.
