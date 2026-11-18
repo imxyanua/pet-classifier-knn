@@ -8,6 +8,15 @@ HUE_BINS = 8
 SAT_BINS = 4
 VAL_BINS = 4
 
+COLOR_DIMS = 6 + HUE_BINS + SAT_BINS + VAL_BINS
+GEOMETRY_DIMS = 5
+HU_DIMS = 7
+FEATURE_GROUPS = {
+    "color": slice(0, COLOR_DIMS),
+    "geometry": slice(COLOR_DIMS, COLOR_DIMS + GEOMETRY_DIMS),
+    "hu": slice(COLOR_DIMS + GEOMETRY_DIMS, COLOR_DIMS + GEOMETRY_DIMS + HU_DIMS),
+}
+
 
 def load_bgr(path):
     data = np.fromfile(path, dtype=np.uint8)
