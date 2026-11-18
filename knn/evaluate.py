@@ -5,9 +5,9 @@ from collections import Counter
 
 import numpy as np
 
-from config import DISPLAY_NAMES, K_CHOICES, SELECTED_BREEDS
+from config import DEFAULT_FEATURE_GROUPS, DISPLAY_NAMES, K_CHOICES, SELECTED_BREEDS
 from dataset import load_or_extract
-from features import FEATURE_GROUPS
+from features import FEATURE_GROUPS, select_feature_groups
 from knn import (
     accuracy_score,
     confusion_matrix,
@@ -34,17 +34,10 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--features",
-        default=",".join(FEATURE_GROUPS),
+        default=",".join(DEFAULT_FEATURE_GROUPS),
         help=f"nhóm đặc trưng, phân tách bằng dấu phẩy: {', '.join(FEATURE_GROUPS)}",
     )
     return parser.parse_args(argv)
-
-
-def select_columns(X, groups):
-    unknown = [g for g in groups if g not in FEATURE_GROUPS]
-    if unknown:
-        raise SystemExit(f"Nhóm đặc trưng không hợp lệ: {', '.join(unknown)}")
-    return np.hstack([X[:, FEATURE_GROUPS[g]] for g in groups])
 
 
 def run_once(X, y, seed, n_folds):
@@ -128,7 +121,10 @@ def main(argv=None):
     X, y, _paths = load_or_extract(
         progress=lambda i, n, p: print(f"\r{i}/{n}", end="", flush=True)
     )
-    X = select_columns(X, groups)
+    try:
+        X = select_feature_groups(X, groups)
+    except ValueError as exc:
+        raise SystemExit(str(exc))
     print(f"{len(y)} mẫu · {X.shape[1]} chiều ({', '.join(groups)})")
 
     print_detailed(run_once(X, y, args.seed, args.folds), args.seed, args.folds)

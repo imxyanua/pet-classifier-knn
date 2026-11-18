@@ -5,4 +5,5 @@ from .features import (
     load_bgr,
     overlay_mask,
     segment_pet,
+    select_feature_groups,
 )
