@@ -41,6 +41,13 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
+def _whiten_axes(ax):
+    """Vạch chia, số trên trục và viền khung màu trắng để đọc được trên nền tối."""
+    ax.tick_params(colors="white", which="both")
+    for spine in ax.spines.values():
+        spine.set_edgecolor("white")
+
+
 def bgr_to_pil(bgr, max_side=380):
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     h, w = rgb.shape[:2]
@@ -401,7 +408,7 @@ class PetClassifierApp(ctk.CTk):
         ax.set_title("Ảnh hưởng của k", color="white")
         ax.set_xlabel("k", color="white")
         ax.set_ylabel("Accuracy (%)", color="white")
-        ax.tick_params(colors="white")
+        _whiten_axes(ax)
         ax.grid(True, alpha=0.25)
         fig.tight_layout()
         self._embed_fig(self.acc_canvas_host, fig, "acc_canvas")
@@ -425,7 +432,10 @@ class PetClassifierApp(ctk.CTk):
             for j in range(cm.shape[1]):
                 color = "white" if cm[i, j] > vmax * 0.55 else "black"
                 ax.text(j, i, str(cm[i, j]), ha="center", va="center", color=color, fontsize=9)
-        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        _whiten_axes(ax)
+        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        _whiten_axes(cbar.ax)
+        cbar.outline.set_edgecolor("white")
         fig.tight_layout()
         self._embed_fig(self.cm_canvas_host, fig, "cm_canvas")
 
