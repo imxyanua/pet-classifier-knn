@@ -1,5 +1,7 @@
 # code by xyanua - github.com/imxyanua
 import os
+from multiprocessing import Pool
+
 import numpy as np
 
 from config import CACHE_PATH, DATA_DIR, SELECTED_BREEDS
@@ -39,7 +41,12 @@ def save_feature_cache(X, y, paths, path=CACHE_PATH):
     )
 
 
-def extract_dataset(samples=None, progress=None):
+def _extract_one(path):
+    vector, _, _ = extract_features(load_bgr(path))
+    return vector
+
+
+def extract_dataset(samples=None, progress=None, workers=None):
     if samples is None:
         samples = list_samples()
     if not samples:
@@ -47,17 +54,18 @@ def extract_dataset(samples=None, progress=None):
             "Không thấy ảnh trong thư mục data/. Hãy chạy download_data.py trước."
         )
 
+    paths = [path for path, _ in samples]
+    labels = [label for _, label in samples]
+    if workers is None:
+        workers = max(1, (os.cpu_count() or 2) - 1)
+
     vectors = []
-    labels = []
-    paths = []
     total = len(samples)
-    for i, (path, label) in enumerate(samples, start=1):
-        vector, _, _ = extract_features(load_bgr(path))
-        vectors.append(vector)
-        labels.append(label)
-        paths.append(path)
-        if progress:
-            progress(i, total, path)
+    with Pool(workers) as pool:
+        for i, vector in enumerate(pool.imap(_extract_one, paths, chunksize=8), start=1):
+            vectors.append(vector)
+            if progress:
+                progress(i, total, paths[i - 1])
     return np.vstack(vectors), np.array(labels), np.array(paths)
 
 
