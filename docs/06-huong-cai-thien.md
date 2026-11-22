@@ -9,11 +9,13 @@ Các hướng dưới đây dựa trên điểm yếu **đã đo được** ở 
 | 1 | Đánh giá đúng cách: chọn $k$ bằng cross-validation, báo cáo trung bình nhiều seed | **Đã làm** | Con số không thiên lệch: 59.3% ± 3.6 |
 | 2 | Bỏ Hu moments | **Đã làm** | Vector gọn hơn; accuracy không đổi trong ngưỡng dao động |
 | 3 | Sửa đặc trưng màu: H dạng vòng tròn, lọc pixel tối/nhạt, thêm Lab | Chưa | Chưa đo; tác động trực tiếp lên nhóm đặc trưng mạnh nhất |
-| 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | Chưa | Biết được trần cải thiện; có thể lớn nhất |
+| 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | **Đã làm phần lớn** | IoU 0.655 → 0.716; accuracy 59.3% → 61.1% |
 | 5 | Cải tiến k-NN: vote theo khoảng cách, khoảng cách chi-square cho histogram | Chưa | Nhỏ đến vừa |
 | 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Một phần | Dễ thử nghiệm, dễ viết báo cáo |
 
-Với độ dao động ±3.6 điểm giữa các cách chia, mọi cải tiến ở các mục 3–5 cần tăng **rõ hơn khoảng 3–4 điểm** trung bình 10 seed thì mới coi là thật sự có lợi.
+Con số ở mục 1 và 2 là kết quả tại thời điểm làm, trước khi sửa phân đoạn ở mục 4.
+
+Với độ dao động khoảng ±3 điểm giữa các cách chia, mọi cải tiến cần tăng **rõ hơn khoảng 3 điểm** trung bình 10 seed trên test, hoặc tăng nhất quán accuracy cross-validation ở mọi seed, thì mới coi là thật sự có lợi.
 
 ---
 
@@ -44,7 +46,7 @@ Với độ dao động ±3.6 điểm giữa các cách chia, mọi cải tiến
 
 ## 3. Cải thiện đặc trưng màu
 
-Màu là nhóm mang phần lớn thông tin (một mình đạt 55.6%), nên cải thiện ở đây có tác động trực tiếp nhất.
+Màu là nhóm mang phần lớn thông tin (một mình đạt 58.6%), nên cải thiện ở đây có tác động trực tiếp nhất.
 
 ### 3a. Xử lý H như đại lượng vòng tròn
 
@@ -72,28 +74,34 @@ Thay vì hai histogram 1D riêng cho H và S, dùng histogram 2D (ví dụ 8×3 
 
 Cặp nhầm lẫn lớn nhất là Egyptian Mau ↔ Sphynx, và Mau còn hay bị nhầm với Samoyed. Đặc điểm phân biệt của Mau là **đốm**, tức là kết cấu chứ không phải màu hay hình dạng. Một histogram LBP (Local Binary Pattern) hoặc thống kê từ ma trận đồng xuất hiện mức xám (GLCM) sẽ mô tả được đốm. Đề chỉ yêu cầu màu và hình dạng, nên nếu thêm thì trình bày như một **thí nghiệm mở rộng**, so sánh có và không có kết cấu.
 
-## 4. Đo và cải thiện phân đoạn
+## 4. Đo và cải thiện phân đoạn — đã làm phần lớn
 
-**Vấn đề.** Hình ở [02-tien-xu-ly-va-phan-doan.md](02-tien-xu-ly-va-phan-doan.md) cho thấy GrabCut chỉ lấy mặt Pug và lấy dính sàn ở Sphynx. Hiện chưa có con số nào cho biết phân đoạn sai bao nhiêu và làm accuracy giảm bao nhiêu.
+Chi tiết ở [02-tien-xu-ly-va-phan-doan.md](02-tien-xu-ly-va-phan-doan.md).
 
-### 4a. Dùng trimap của Oxford làm chuẩn
+### 4a. Đo chất lượng mask bằng trimap — đã làm
 
-Bộ Oxford-IIIT Pet có file `annotations.tar.gz` chứa **trimap** cho từng ảnh: mỗi pixel được gán tiền cảnh, nền, hoặc viền. Đây là mask chuẩn do người gán nhãn.
+`python download_data.py --trimaps` tải trimap của Oxford; `python evaluate_segmentation.py` tính IoU, precision, recall của mask GrabCut theo từng giống. Trimap chỉ dùng để chấm điểm, không dùng để trích đặc trưng.
 
-Hai thí nghiệm nên làm:
+Kết quả với cách khởi tạo cũ: IoU 0.655, 27.4% số ảnh sai nặng (IoU < 0.5), recall 0.75 (mask thường thiếu phần thân).
 
-1. **Đo chất lượng mask:** tính IoU (Intersection over Union) giữa mask GrabCut và trimap cho từng ảnh, rồi xem IoU trung bình theo từng giống. Dự đoán: Pug và Sphynx thấp nhất.
-2. **Thí nghiệm "oracle":** trích đặc trưng bằng trimap thay vì GrabCut, rồi chạy lại k-NN. Accuracy thu được là **trần** của phương pháp nếu phân đoạn hoàn hảo.
-   - Nếu trần cao hơn hẳn (ví dụ 70%), thì cải thiện phân đoạn là hướng đáng đầu tư nhất.
-   - Nếu trần chỉ cao hơn vài điểm, thì giới hạn nằm ở đặc trưng, nên tập trung vào mục 3.
+### 4b. Cải thiện GrabCut — đã làm
 
-Thí nghiệm này rất có giá trị cho báo cáo vì nó tách được hai nguồn lỗi: lỗi phân đoạn và lỗi đặc trưng.
+| Đã thử | Kết quả |
+|---|---|
+| Tăng số vòng lặp 1 → 5 | Giúp một chút khi đi kèm khởi tạo tốt hơn |
+| Thu hẹp vùng nền chắc chắn còn 1% sát mép, thêm dải "có thể là nền" 5% | **Lợi ích chính**: recall 0.75 → 0.85 |
+| Elip "chắc chắn là con vật" ở tâm (20%) | Giúp thêm; elip 30–40% kém hơn |
+| Chạy lại khi mask phủ > 75% ảnh | Không cải thiện đáng kể |
+| Tự động phát hiện và cắt khung viền | Không cải thiện đáng kể |
+| GrabCut trên ảnh Lab thay vì BGR | Không cải thiện đáng kể |
 
-### 4b. Cải thiện GrabCut
+Kết quả: IoU 0.716, 22.1% ảnh sai nặng; accuracy nhận dạng 59.3% → 61.1%, accuracy cross-validation tăng ở cả 10/10 seed.
 
-- Tăng số vòng lặp từ 1 lên 3–5. Chậm hơn khi trích đặc trưng nhưng chỉ phải chạy một lần nhờ cache.
-- Khởi tạo tốt hơn hình chữ nhật cố định 8%: ví dụ đánh dấu một vùng nhỏ ở tâm ảnh là "chắc chắn tiền cảnh" (`GC_FGD`) để GrabCut không bỏ mất thân con vật có màu gần nền.
-- Phát hiện mask bất thường: nếu mask chiếm < 10% hoặc > 90% ảnh, coi là phân đoạn thất bại và dùng chiến lược dự phòng.
+### 4c. Còn lại
+
+- **Thí nghiệm "oracle":** trích đặc trưng bằng trimap thay vì GrabCut rồi chạy lại k-NN, để biết **trần** accuracy nếu phân đoạn hoàn hảo. Đây chỉ là phân tích phụ (dùng mask người vẽ thay cho bước phân đoạn của đề), nhưng cho biết còn bao nhiêu lỗi nằm ở phân đoạn so với ở đặc trưng.
+- **Nền đồng nhất:** 149 ảnh tệ đi khi đổi cách khởi tạo, chủ yếu ảnh có nền một màu (tuyết, phông tối) khiến mask tràn ra cả ảnh. Có thể kết hợp hai cách khởi tạo và chọn mask "hợp lý" hơn theo một tiêu chí không cần trimap (ví dụ diện tích mask nằm trong khoảng 10–80% ảnh).
+- **Giới hạn của GrabCut:** khi con vật cùng màu với nền (thân Pug màu kem trên tường trắng), không cách khởi tạo nào sửa được, vì GrabCut chỉ dựa vào màu.
 
 ## 5. Cải tiến k-NN
 
@@ -122,6 +130,6 @@ Nếu thời gian có hạn, thứ tự sau cho nhiều giá trị nhất cho b�
 
 1. ~~Mục 1 (cross-validation, nhiều seed)~~ — đã làm.
 2. ~~Mục 2 (bỏ Hu)~~ — đã làm; bảng ablation có trong [05-danh-gia.md](05-danh-gia.md), nên đưa vào báo cáo.
-3. Mục 4a (IoU và thí nghiệm oracle với trimap) — trả lời được "lỗi nằm ở đâu".
+3. ~~Mục 4a, 4b (đo IoU, cải thiện khởi tạo GrabCut)~~ — đã làm; bảng so sánh các cách khởi tạo nên đưa vào phần phân đoạn của báo cáo.
 4. Mục 3a và 3b (sửa kênh H) — cải tiến nhỏ, có cơ sở lý thuyết rõ.
 5. Mục 5 (vote theo khoảng cách, chi-square) — mở rộng phần khảo sát khoảng cách.

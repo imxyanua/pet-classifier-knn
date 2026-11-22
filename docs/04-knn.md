@@ -72,7 +72,7 @@ Với 5 lớp, hòa có thể xảy ra ngay cả khi $k$ lẻ (ví dụ $k=5$ ch
 | Vừa | Cân bằng giữa chi tiết và ổn định. |
 | Lớn | Biên trơn, nhưng láng giềng bắt đầu lấy mẫu từ lớp khác. Dễ **underfit**; khi $k$ tiến tới $N$, luôn dự đoán lớp đông nhất. |
 
-Trên dữ liệu này, $k=1$ luôn kém nhất (khoảng 50% accuracy CV). Với Manhattan, accuracy tăng tới khoảng $k=7$ rồi gần như phẳng tới $k=25$; với Euclidean, đạt đỉnh ở $k=13$ rồi giảm. Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
+Trên dữ liệu này, $k=1$ luôn kém nhất (khoảng 50–56% accuracy CV). Với Manhattan, accuracy tăng tới khoảng $k=9$ rồi gần như phẳng tới $k=25$; với Euclidean, đạt đỉnh ở $k=13$ rồi giảm nhẹ. Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
 
 ## Chọn k bằng cross-validation
 
