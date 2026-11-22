@@ -4,7 +4,7 @@ import pytest
 
 from features import FEATURE_GROUPS, select_feature_groups
 from features.features import grabcut_init_mask
-from features.segmentation_eval import mask_scores
+from features.segmentation_eval import failure_type, mask_scores, split_samples
 
 
 def test_grabcut_init_mask_layout():
@@ -22,6 +22,28 @@ def test_mask_scores_ignores_border_pixels():
     assert iou == pytest.approx(1 / 3)
     assert precision == pytest.approx(0.5)
     assert recall == pytest.approx(0.5)
+
+
+@pytest.mark.parametrize(
+    "scores, expected",
+    [
+        ((0.8, 0.9, 0.9), None),
+        ((0.3, 0.9, 0.3), "missing"),
+        ((0.3, 0.3, 0.9), "background"),
+        ((0.2, 0.4, 0.4), "both"),
+    ],
+)
+def test_failure_type(scores, expected):
+    assert failure_type(*scores) == expected
+
+
+def test_split_samples_matches_stratified_split():
+    samples = [(f"img{i}.jpg", "a" if i < 50 else "b") for i in range(100)]
+    train = split_samples(samples, "train")
+    test = split_samples(samples, "test")
+    assert len(train) == 80 and len(test) == 20
+    assert set(train).isdisjoint(test)
+    assert split_samples(samples, "all") == samples
 
 
 def test_feature_groups_cover_the_34_dim_vector_without_overlap():
