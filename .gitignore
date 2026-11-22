@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
 features_cache.npz
+raw_data/annotations.tar.gz
+raw_data/annotations/
 .venv/
 venv/

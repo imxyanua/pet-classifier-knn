@@ -40,13 +40,13 @@ Accuracy chung có thể che mất một lớp yếu; các thước đo theo l�
 
 | | Accuracy trên test |
 |---|---:|
-| Trung bình 10 seed | **59.3% ± 3.6%** |
-| Thấp nhất / cao nhất | 54.5% / 68.0% |
-| `seed=42` | 59.0% |
+| Trung bình 10 seed | **61.1% ± 2.8%** |
+| Thấp nhất / cao nhất | 57.0% / 65.0% |
+| `seed=42` | 64.0% |
 
-CV chọn **Manhattan ở cả 10 seed**. Giá trị $k$ được chọn: 25 (5 lần), 13 (2), 15 (2), 19 (1).
+CV chọn **Manhattan ở cả 10 seed**. Giá trị $k$ được chọn: 19 (4 lần), 25 (3), 7, 13, 15 (mỗi giá trị 1 lần).
 
-Khoảng dao động 54.5%–68.0% là lớn. Nguyên nhân chính là tập test nhỏ: với 200 ảnh, mỗi ảnh đúng/sai thay đổi accuracy 0.5 điểm, và việc ảnh "khó" (phân đoạn lỗi) rơi vào test nhiều hay ít phụ thuộc may rủi. Vì vậy **chênh lệch dưới khoảng 3–4 điểm giữa hai phương án không đủ để kết luận phương án nào tốt hơn**.
+Khoảng dao động 57.0%–65.0% là lớn. Nguyên nhân chính là tập test nhỏ: với 200 ảnh, mỗi ảnh đúng/sai thay đổi accuracy 0.5 điểm, và việc ảnh "khó" (phân đoạn lỗi) rơi vào test nhiều hay ít phụ thuộc may rủi. Vì vậy **chênh lệch dưới khoảng 3–4 điểm giữa hai phương án không đủ để kết luận phương án nào tốt hơn**.
 
 ### Ảnh hưởng của k và khoảng cách
 
@@ -56,36 +56,34 @@ Accuracy cross-validation trên 800 ảnh train với `seed=42`:
 
 | $k$ | 1 | 3 | 5 | 7 | 9 | 11 | 13 | 15 | 19 | 25 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Euclidean | 49.5 | 53.9 | 54.0 | 55.9 | 55.8 | 56.4 | 57.4 | 56.8 | 55.9 | 55.4 |
-| Manhattan | 51.3 | 55.1 | 56.6 | **58.4** | 57.4 | 57.6 | 57.8 | 58.3 | 57.9 | **58.4** |
+| Euclidean | 49.8 | 53.0 | 57.6 | 59.8 | 61.5 | 61.9 | 62.3 | 61.6 | 61.4 | 61.0 |
+| Manhattan | 55.6 | 58.0 | 60.1 | 62.6 | **63.0** | 62.4 | 62.0 | 62.5 | 61.6 | 62.8 |
 
-- **Manhattan tốt hơn Euclidean ở mọi $k$.** L2 bình phương độ lệch nên một chiều lệch lớn chi phối cả khoảng cách; L1 cộng tuyến tính nên các chiều đóng góp đều hơn. Với vector trộn màu và hình học, nơi một vài chiều có thể nhiễu do phân đoạn lỗi, L1 bền hơn.
-- **$k$ nhỏ kém rõ rệt.** $k=1$ thấp hơn đỉnh khoảng 7 điểm: một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn sai hoặc ảnh lạ.
-- **Với Manhattan, đường gần như phẳng từ $k=7$ đến $k=25$** (dao động trong khoảng 1 điểm). Đó là lý do CV chọn $k$ khác nhau giữa các seed: các giá trị này gần như tương đương, và sai số ngẫu nhiên quyết định cái nào nhỉnh hơn.
-- **Với Euclidean, đạt đỉnh ở $k=13$ rồi giảm**: láng giềng xa bắt đầu đến từ lớp khác.
-
-Với `seed=42`, $k=7$ và $k=25$ hòa nhau (58.38%), CV giữ $k=7$ vì gặp trước.
+- **Manhattan tốt hơn Euclidean ở 9/10 giá trị $k$**, và chênh lệch lớn nhất ở $k$ nhỏ (5.9 điểm ở $k=1$). L2 bình phương độ lệch nên một chiều lệch lớn chi phối cả khoảng cách; L1 cộng tuyến tính nên các chiều đóng góp đều hơn. Với vector trộn màu và hình học, nơi một vài chiều có thể nhiễu do phân đoạn lỗi, L1 bền hơn.
+- **$k$ nhỏ kém rõ rệt.** $k=1$ thấp hơn đỉnh 7–12 điểm: một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn sai hoặc ảnh lạ.
+- **Với Manhattan, đường gần như phẳng từ $k=7$ đến $k=25$** (dao động trong khoảng 1.5 điểm). Đó là lý do CV chọn $k$ khác nhau giữa các seed: các giá trị này gần như tương đương, và sai số ngẫu nhiên quyết định cái nào nhỉnh hơn.
+- **Với Euclidean, đạt đỉnh ở $k=13$ rồi giảm nhẹ**: láng giềng xa bắt đầu đến từ lớp khác.
 
 ## Đọc ma trận nhầm lẫn
 
 ![Ma trận nhầm lẫn](confusion_matrix.png)
 
-`seed=42`, Manhattan, $k=7$, accuracy 59.0%:
+`seed=42`, Manhattan, $k=9$, accuracy 64.0%:
 
 | Giống | Đúng / 40 | Precision | Recall | F1 | Hay bị nhầm thành |
 |---|---:|---:|---:|---:|---|
-| Bombay | 28 | 71.8% | 70.0% | **70.9%** | Pug (8) |
-| Samoyed | 26 | 60.5% | 65.0% | 62.7% | Egyptian Mau (5), Pug (4) |
-| Pug | 23 | 53.5% | 57.5% | 55.4% | Bombay (5), Sphynx (5) |
-| Egyptian Mau | 21 | 53.8% | 52.5% | 53.2% | Samoyed (7), Sphynx (6) |
-| Sphynx | 20 | 55.6% | 50.0% | 52.6% | Egyptian Mau (8), Samoyed (6) |
+| Bombay | 30 | 78.9% | 75.0% | **76.9%** | Pug (5), Sphynx (4) |
+| Samoyed | 30 | 63.8% | 75.0% | 69.0% | Pug (6), Sphynx (3) |
+| Egyptian Mau | 22 | 68.8% | 55.0% | 61.1% | Pug (9), Samoyed (4) |
+| Pug | 24 | 50.0% | 60.0% | 54.5% | Samoyed (5), Bombay (5), Sphynx (4) |
+| Sphynx | 22 | 62.9% | 55.0% | 58.7% | Samoyed (8), Egyptian Mau (6) |
 
 Giải thích:
 
-- **Bombay tốt nhất** nhờ lông đen tuyền cho $\mu_V$ thấp hẳn các giống khác. Khi sai, Bombay hay bị đoán là Pug, có lẽ vì mặt Pug đen và mask Pug thường chỉ lấy được phần mặt.
-- **Sphynx ↔ Egyptian Mau** là cặp nhầm lẫn lớn nhất (8 và 6 ảnh). Cả hai có tông xám/nhạt, dáng mảnh, tai to. Nét phân biệt chính của Mau là **đốm**, tức kết cấu, mà vector hiện tại không mô tả.
-- **Egyptian Mau ↔ Samoyed** (7 và 5): lông xám bạc của Mau có S thấp, V khá cao, gần với lông trắng của Samoyed.
-- **Pug** có precision thấp nhất trong nhóm chó (53.5%): nhiều ảnh của giống khác bị đoán là Pug (8 Bombay, 5 Sphynx, 4 Samoyed). Mask Pug thường không đầy đủ nên đặc trưng của Pug trải rộng, "hút" các ảnh lạ về phía nó.
+- **Bombay tốt nhất** nhờ lông đen tuyền cho $\mu_V$ thấp hẳn các giống khác. **Samoyed** cũng có recall 75% nhờ lông trắng.
+- **Pug "hút" ảnh của các giống khác**: precision chỉ 50%, tức một nửa số ảnh bị đoán là Pug thực ra là giống khác (9 Mau, 6 Samoyed, 5 Bombay, 4 Sphynx). Mask Pug thường không đầy đủ (chỉ lấy mặt, hoặc dính nền), nên các vector Pug trải rộng trong không gian đặc trưng và trở thành láng giềng của nhiều ảnh lạ.
+- **Sphynx ↔ Egyptian Mau** (6 ảnh Sphynx bị đoán là Mau): cả hai có tông xám/nhạt, dáng mảnh, tai to. Nét phân biệt chính của Mau là **đốm**, tức kết cấu, mà vector hiện tại không mô tả.
+- **Sphynx → Samoyed** (8 ảnh): da hồng nhạt có S thấp, V cao, gần với lông trắng; Sphynx cũng là giống có mask dính nền nhiều nhất (precision mask 0.77, xem [02-tien-xu-ly-va-phan-doan.md](02-tien-xu-ly-va-phan-doan.md)), nên màu nền sáng (chăn, gối) lẫn vào đặc trưng.
 
 ## Đóng góp của từng nhóm đặc trưng (ablation)
 
@@ -99,24 +97,32 @@ python evaluate.py --features color
 
 | Đặc trưng | Số chiều | Accuracy test (10 seed) |
 |---|---:|---:|
-| Màu + hình học + Hu | 34 | 58.8% ± 2.7 |
-| **Màu + hình học (mặc định)** | 27 | **59.3% ± 3.6** |
-| Chỉ màu | 22 | 55.6% ± 3.2 |
-| Hình học + Hu | 12 | 29.1% ± 3.3 |
-| Chỉ hình học | 5 | 31.2% ± 3.3 |
-| Chỉ Hu moments | 7 | 25.9% ± 2.5 |
+| Màu + hình học + Hu | 34 | 60.6% ± 2.5 |
+| **Màu + hình học (mặc định)** | 27 | **61.1% ± 2.8** |
+| Chỉ màu | 22 | 58.6% ± 3.3 |
+| Hình học + Hu | 12 | 32.4% ± 2.4 |
+| Chỉ hình học | 5 | 31.1% ± 3.5 |
+| Chỉ Hu moments | 7 | 29.3% ± 0.8 |
 
 Kết luận:
 
-- **Màu mang phần lớn thông tin.** Chỉ màu đã đạt 55.6%.
-- **5 đặc trưng hình học bổ sung khoảng 3.7 điểm** khi gộp với màu, dù một mình chỉ đạt 31%. Hai nhóm mang thông tin khác nhau: màu cho biết "lông màu gì", hình học cho biết "dáng tròn hay mảnh".
-- **Hu moments không có ích.** Một mình gần mức đoán bừa (25.9% so với 20%), và thêm vào không tăng accuracy. Chúng bị bỏ khỏi bộ mặc định vì làm vector dài hơn mà không mang thêm thông tin. Mức chênh 58.8% so với 59.3% nằm trong độ dao động, nên **không** được coi là bằng chứng bỏ Hu làm tăng accuracy.
+- **Màu mang phần lớn thông tin.** Chỉ màu đã đạt 58.6%.
+- **5 đặc trưng hình học bổ sung khoảng 2.5 điểm** khi gộp với màu, dù một mình chỉ đạt 31%. Hai nhóm mang thông tin khác nhau: màu cho biết "lông màu gì", hình học cho biết "dáng tròn hay mảnh".
+- **Hu moments không có ích.** Một mình gần mức đoán bừa (29.3% so với 20%), và thêm vào không tăng accuracy. Chúng bị bỏ khỏi bộ mặc định vì làm vector dài hơn mà không mang thêm thông tin. Mức chênh 60.6% so với 61.1% nằm trong độ dao động, nên **không** được coi là bằng chứng bỏ Hu làm tăng accuracy.
 
-### So với cách đánh giá cũ
+## Các phiên bản
 
-Phiên bản đầu tiên chọn $k$ trực tiếp trên tập test với một seed duy nhất và chỉ thử $k \le 11$. Cách đó cho 58.0% (Manhattan, $k=5$) và dẫn tới kết luận sai rằng "hình dạng gần như không giúp": ở $k=5$ cố định, màu + hình dạng và chỉ màu cho cùng 55.5%. Khi cho phép CV chọn $k$ lớn hơn, lợi ích của hình học mới lộ ra, có lẽ vì vote trên nhiều láng giềng làm mượt nhiễu của từng chiều hình dạng.
+| Phiên bản | Thay đổi | Accuracy báo cáo |
+|---|---|---:|
+| 1 | Chọn $k \le 11$ trực tiếp trên tập test, một seed | 58.0% (lạc quan) |
+| 2 | Chọn $k \le 25$ bằng cross-validation trên train, 10 seed, bỏ Hu | 59.3% ± 3.6 |
+| 3 | Khởi tạo GrabCut bằng mask viền/tâm, 5 vòng | **61.1% ± 2.8** |
 
-Bài học: một cấu hình cố định có thể che mất đóng góp của một nhóm đặc trưng. So sánh đặc trưng nên được làm **sau khi** chọn siêu tham số riêng cho từng phương án.
+Con số của phiên bản 1 không so sánh trực tiếp được với hai phiên bản sau, vì nó dùng tập test để chọn $k$.
+
+Phiên bản 1 còn dẫn tới một kết luận sai: "hình dạng gần như không giúp". Ở $k=5$ cố định, màu + hình dạng và chỉ màu cho cùng 55.5%. Khi cho phép CV chọn $k$ lớn hơn, lợi ích của hình học mới lộ ra, có lẽ vì vote trên nhiều láng giềng làm mượt nhiễu của từng chiều hình dạng. Bài học: một cấu hình cố định có thể che mất đóng góp của một nhóm đặc trưng; so sánh đặc trưng nên được làm **sau khi** chọn siêu tham số riêng cho từng phương án.
+
+Ảnh hưởng của phân đoạn (phiên bản 3) được phân tích ở [02-tien-xu-ly-va-phan-doan.md](02-tien-xu-ly-va-phan-doan.md).
 
 ## Tái tạo các con số
 
@@ -126,4 +132,4 @@ python evaluate.py --features color,geometry,hu   # một dòng trong bảng abl
 python evaluate.py --repeats 0                     # chỉ chạy seed=42, bỏ phần lặp
 ```
 
-Lần đầu mất 1–2 phút để trích đặc trưng; các lần sau dùng cache, mỗi lần chạy khoảng 30 giây.
+Lần đầu mất khoảng 1 phút để trích đặc trưng (chạy song song); các lần sau dùng cache, mỗi lần chạy khoảng 30 giây.

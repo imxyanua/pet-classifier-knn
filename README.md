@@ -13,7 +13,7 @@ Project vẫn đang được cải thiện dần, mục tiêu là dễ hiểu t�
 Mỗi ảnh đi qua pipeline sau:
 
     ảnh gốc -> resize (cạnh dài 192px) -> Gaussian blur 5×5 ↩
-            -> GrabCut + morphology + giữ vùng lớn nhất -> mask đối tượng ↩
+            -> GrabCut (khởi tạo bằng mask viền/tâm, 5 vòng) + morphology + giữ vùng lớn nhất -> mask đối tượng ↩
             -> đặc trưng màu (HSV) + đặc trưng hình học (contour) -> vector 27 chiều ↩
             -> chuẩn hóa z-score -> k-NN (Euclidean / Manhattan) -> nhãn giống
 
@@ -23,7 +23,7 @@ Mỗi ảnh đi qua pipeline sau:
 
 | Yêu cầu | Cách làm |
 |---|---|
-| Tiền xử lý và phân đoạn đối tượng | Resize, làm mờ, GrabCut, đóng/mở hình thái học, giữ contour lớn nhất |
+| Tiền xử lý và phân đoạn đối tượng | Resize, làm mờ, GrabCut, đóng/mở hình thái học, giữ contour lớn nhất; chất lượng mask được chấm bằng IoU so với trimap của Oxford |
 | Trích đặc trưng màu và hình dạng | Thống kê và histogram HSV trên vùng đối tượng; tỷ lệ khung, độ đặc, độ tròn, độ thon (Hu moments có trích nhưng không dùng mặc định) |
 | Cài đặt k-NN, khảo sát ảnh hưởng của $k$ hoặc khoảng cách | k-NN tự viết; khảo sát $k$ từ 1 đến 25 với cả Euclidean và Manhattan bằng cross-validation |
 | Đánh giá bằng độ chính xác và ma trận nhầm lẫn | Accuracy, confusion matrix 5×5, precision / recall / F1 theo lớp, đều tự cài |
@@ -43,8 +43,8 @@ Tập test không được dùng để chọn $k$, nên con số báo cáo là �
 
 | | Accuracy trên test |
 |---|---:|
-| Trung bình 10 seed | **59.3% ± 3.6%** (thấp nhất 54.5%, cao nhất 68.0%) |
-| `seed=42` (CV chọn Manhattan, $k=7$) | 59.0% |
+| Trung bình 10 seed | **61.1% ± 2.8%** (thấp nhất 57.0%, cao nhất 65.0%) |
+| `seed=42` (CV chọn Manhattan, $k=9$) | 64.0% |
 
 Đoán ngẫu nhiên với 5 lớp chỉ đạt 20%.
 
@@ -54,11 +54,11 @@ Tập test không được dùng để chọn $k$, nên con số báo cáo là �
 
 Nhận xét:
 
-- **Manhattan tốt hơn Euclidean ở mọi giá trị $k$**, và được CV chọn ở cả 10 seed. Khoảng cách L1 ít bị chi phối bởi một vài chiều lệch lớn, phù hợp khi vector trộn nhiều loại đặc trưng.
-- **$k=1$ kém nhất** (khoảng 50%): một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn lỗi. Accuracy tăng tới khoảng $k=7$ rồi gần như phẳng tới $k=25$ với Manhattan; với Euclidean, accuracy giảm sau $k=13$.
-- **Bombay** nhận dạng tốt nhất (28/40, F1 70.9%) nhờ lông đen tuyền.
-- **Sphynx** và **Egyptian Mau** nhầm lẫn với nhau nhiều nhất (8 và 6 ảnh). Cả hai có tông xám/nhạt, và nét phân biệt của Mau là đốm, tức kết cấu, không nằm trong đặc trưng màu hay hình dạng.
-- **Pug** bị nhầm sang Bombay (5) và Sphynx (5). Phần lớn lỗi đến từ phân đoạn: GrabCut thường chỉ lấy được phần mặt hoặc lấy lẫn nền.
+- **Manhattan tốt hơn Euclidean ở gần như mọi giá trị $k$**, và được CV chọn ở cả 10 seed. Khoảng cách L1 ít bị chi phối bởi một vài chiều lệch lớn, phù hợp khi vector trộn nhiều loại đặc trưng.
+- **$k$ nhỏ kém rõ rệt**: $k=1$ chỉ đạt khoảng 50–56%, vì một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn lỗi. Accuracy tăng tới khoảng $k=9$ rồi gần như phẳng tới $k=25$.
+- **Bombay** và **Samoyed** nhận dạng tốt nhất (30/40 mỗi giống) nhờ màu lông đặc trưng: đen tuyền và trắng.
+- **Egyptian Mau** hay bị nhầm thành Pug (9 ảnh); **Sphynx** hay bị nhầm thành Samoyed (8) và Egyptian Mau (6). Nét phân biệt của Mau là đốm, tức kết cấu, không nằm trong đặc trưng màu hay hình dạng.
+- **Pug** có precision thấp nhất (50%): nhiều ảnh của giống khác bị đoán là Pug. Mask của Pug thường không đầy đủ (chỉ lấy được mặt) nên đặc trưng Pug trải rộng.
 
 ### Đóng góp của từng nhóm đặc trưng
 
@@ -66,14 +66,31 @@ Cùng quy trình trên, 10 seed:
 
 | Đặc trưng | Số chiều | Accuracy |
 |---|---:|---:|
-| Màu + hình học + Hu | 34 | 58.8% ± 2.7 |
-| **Màu + hình học (mặc định)** | 27 | **59.3% ± 3.6** |
-| Chỉ màu | 22 | 55.6% ± 3.2 |
-| Chỉ hình học | 5 | 31.2% ± 3.3 |
-| Chỉ Hu moments | 7 | 25.9% ± 2.5 |
+| Màu + hình học + Hu | 34 | 60.6% ± 2.5 |
+| **Màu + hình học (mặc định)** | 27 | **61.1% ± 2.8** |
+| Chỉ màu | 22 | 58.6% ± 3.3 |
+| Chỉ hình học | 5 | 31.1% ± 3.5 |
+| Chỉ Hu moments | 7 | 29.3% ± 0.8 |
 
-- **Màu mang phần lớn thông tin**, 5 đặc trưng hình học bổ sung thêm khoảng 3.7 điểm.
+- **Màu mang phần lớn thông tin**, 5 đặc trưng hình học bổ sung thêm khoảng 2.5 điểm.
 - **Hu moments gần mức đoán bừa** khi dùng một mình và không giúp khi gộp. Project bỏ chúng vì vector gọn hơn mà không mất gì; mức chênh 0.5 điểm nằm trong độ dao động nên không phải lý do.
+
+### Chất lượng phân đoạn
+
+Trimap của bộ Oxford (mask do người gán nhãn) được dùng **chỉ để chấm điểm** mask GrabCut, không bao giờ dùng để trích đặc trưng. Thước đo là IoU: diện tích phần giao chia diện tích phần hợp giữa mask và trimap.
+
+| Cách khởi tạo GrabCut | IoU trung bình | Ảnh phân đoạn sai nặng (IoU < 0.5) | Accuracy nhận dạng (10 seed) |
+|---|---:|---:|---:|
+| Hình chữ nhật cách mép 8%, 1 vòng (cũ) | 0.655 | 27.4% | 59.3% ± 3.6 |
+| **Mask viền/tâm, 5 vòng (hiện tại)** | **0.716** | **22.1%** | **61.1% ± 2.8** |
+
+Cách cũ coi toàn bộ 8% sát mép là nền chắc chắn, nên mọi phần con vật chạm mép ảnh (rất phổ biến với ảnh thú cưng) đều bị cắt mất; khi con vật chiếm gần hết khung hình, mask thường rỗng. Cách mới chỉ coi 1% ngoài cùng là nền chắc chắn, dải 5% tiếp theo là "có thể là nền", và một elip nhỏ ở tâm ảnh là "chắc chắn là con vật".
+
+Trên 990 ảnh có trimap hợp lệ: 342 ảnh có IoU tăng hơn 0.05, 149 ảnh giảm hơn 0.05, 499 ảnh gần như không đổi. Accuracy cross-validation trên tập train tăng ở cả 10/10 seed (trung bình từ 59.1% lên 62.9%).
+
+<img width="576" alt="segmentation_before_after" src="docs/segmentation_before_after.png" />
+
+Mỗi hàng: ảnh, mask cũ, mask mới. Bốn hàng đầu là các ảnh cải thiện nhiều nhất, hai hàng cuối là các ảnh tệ đi nhiều nhất: với nền đồng nhất (tuyết, nền tối), mask mới tràn ra gần hết ảnh.
 
 ## Các giống được chọn
 
@@ -126,6 +143,7 @@ Cài trong [`knn/knn.py`](knn/knn.py) và [`knn/validation.py`](knn/validation.p
 pet-classifier-knn/
 ├── app.py               # chạy desktop app
 ├── evaluate.py          # chạy đánh giá trên terminal
+├── evaluate_segmentation.py  # chấm IoU của phân đoạn so với trimap
 ├── download_data.py     # tải và lọc bộ Oxford-IIIT Pet
 ├── config.py            # đường dẫn, danh sách giống, các giá trị k, nhóm đặc trưng mặc định
 ├── requirements.txt
@@ -134,7 +152,7 @@ pet-classifier-knn/
 ├── knn/                 # k-NN tự cài, cross-validation, script đánh giá
 ├── dataset/             # đọc thư mục data/ và cache đặc trưng
 ├── gui/                 # giao diện CustomTkinter
-├── tests/               # unit test cho k-NN và chọn đặc trưng
+├── tests/               # unit test cho k-NN, phân đoạn, chọn đặc trưng
 ├── docs/                # tài liệu chi tiết và hình minh họa
 ├── data/                # 5 giống × 200 ảnh (đầu vào train/test)
 └── raw_data/            # bộ ảnh gốc Oxford-IIIT Pet (Git LFS)
@@ -176,6 +194,12 @@ Repo cũng kèm file torrent `oxford-iiit-pet-b18bbd9ba03d50b0f7f479acc9f4228a40
 
 > `raw_data/images.tar.gz` (~755 MB) được lưu bằng Git LFS. Khi clone, cài Git LFS trước hoặc chỉ cần thư mục `data/` là đủ để chạy.
 
+Để chấm điểm phân đoạn, tải thêm trimap (khoảng 19 MB, không được commit vào repo):
+
+```bash
+python download_data.py --trimaps
+```
+
 ## Đánh giá trên terminal
 
 ```bash
@@ -184,7 +208,7 @@ python evaluate.py
 
 Script sẽ:
 
-1. trích đặc trưng cho 1.000 ảnh (lần đầu mất khoảng 1–2 phút), lưu vào `features_cache.npz`
+1. trích đặc trưng cho 1.000 ảnh, chạy song song trên nhiều nhân CPU (lần đầu mất khoảng 1 phút), lưu vào `features_cache.npz`
 2. với `seed=42`: in bảng accuracy cross-validation theo khoảng cách × $k$, cặp được chọn, accuracy trên test, ma trận nhầm lẫn, precision / recall / F1 theo lớp
 3. lặp quy trình với seed 0–9, in accuracy test của từng lần, trung bình ± độ lệch chuẩn và các cấu hình đã được chọn
 
@@ -205,13 +229,30 @@ python evaluate.py --features color,geometry,hu
 
 Những lần chạy sau dùng lại cache nên chỉ mất khoảng 30 giây. Xóa `features_cache.npz` nếu đã sửa code trích đặc trưng.
 
+## Chấm điểm phân đoạn
+
+```bash
+python evaluate_segmentation.py
+```
+
+Cần tải trimap trước (`python download_data.py --trimaps`). Script phân đoạn 1.000 ảnh và in IoU trung bình, tỷ lệ ảnh có IoU < 0.5, precision và recall của mask theo từng giống. 10 ảnh có trimap bị hỏng trong bộ Oxford được bỏ qua.
+
+| Giống | IoU | IoU < 0.5 | Precision | Recall |
+|---|---:|---:|---:|---:|
+| Pug | 0.729 | 17.5% | 0.875 | 0.831 |
+| Samoyed | 0.731 | 21.0% | 0.861 | 0.841 |
+| Bombay | 0.723 | 22.5% | 0.847 | 0.843 |
+| Egyptian Mau | 0.751 | 19.5% | 0.841 | 0.884 |
+| Sphynx | 0.648 | 30.0% | 0.772 | 0.840 |
+| **Tất cả** | **0.716** | **22.1%** | **0.839** | **0.848** |
+
 ## Chạy test
 
 ```bash
 python -m pytest
 ```
 
-Test kiểm tra k-NN trên dữ liệu tự tạo, quy tắc phá hòa, chuẩn hóa, chia tập, cross-validation, các metric và việc chọn nhóm đặc trưng.
+Test kiểm tra k-NN trên dữ liệu tự tạo, quy tắc phá hòa, chuẩn hóa, chia tập, cross-validation, các metric, mask khởi tạo GrabCut, cách tính IoU và việc chọn nhóm đặc trưng.
 
 ## Desktop app
 
@@ -237,9 +278,9 @@ Nếu chưa có cache, hãy chạy tab Đánh giá (hoặc `python evaluate.py`)
 
 ## Hạn chế
 
-- **Phân đoạn chưa ổn định.** GrabCut được khởi tạo bằng một hình chữ nhật cố định (cách mép 8%). Với ảnh như Pug ở hình đầu trang, mask chỉ lấy được phần mặt; với Sphynx thì lấy dính cả sàn. Mask sai làm lệch cả đặc trưng màu lẫn hình dạng.
+- **Phân đoạn vẫn sai nặng ở khoảng 22% số ảnh.** GrabCut chỉ dựa vào màu, nên thất bại khi con vật cùng màu với nền: Pug ở hình đầu trang vẫn chỉ lấy được phần mặt vì thân màu kem gần với bức tường; với nền đồng nhất hoặc ảnh có khung viền, mask có thể tràn ra gần hết ảnh. Sphynx khó nhất (IoU 0.648) vì da hồng/xám dễ lẫn với chăn, thảm.
 - **Hình dạng phụ thuộc tư thế.** Con vật nằm, ngồi hay đứng cho contour rất khác nhau, nên hình học một mình chỉ đạt khoảng 31% và Hu moments không dùng được.
-- **Tập test nhỏ.** Với 200 ảnh test, kết quả dao động khoảng ±3.6 điểm giữa các cách chia. Các chênh lệch nhỏ hơn mức này không đủ để kết luận cách nào tốt hơn.
+- **Tập test nhỏ.** Với 200 ảnh test, kết quả dao động khoảng ±3 điểm giữa các cách chia. Các chênh lệch nhỏ hơn mức này không đủ để kết luận cách nào tốt hơn.
 - **Không mô tả kết cấu.** Đốm của Egyptian Mau không được đặc trưng màu hay hình dạng nắm bắt.
 
 ## Tài liệu chi tiết

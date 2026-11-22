@@ -1,24 +1,36 @@
 # code by xyanua - github.com/imxyanua
+import argparse
 import os
 import shutil
 import tarfile
 import urllib.request
 
-from config import DATA_DIR, RAW_DIR, SELECTED_BREEDS, TAR_PATH
+from config import (
+    ANNOTATIONS_TAR_PATH,
+    DATA_DIR,
+    RAW_DIR,
+    SELECTED_BREEDS,
+    TAR_PATH,
+    TRIMAP_DIR,
+)
 
 URLS = [
     "https://thor.robots.ox.ac.uk/~vgg/data/pets/images.tar.gz",
     "https://www.robots.ox.ac.uk/~vgg/data/pets/data/images.tar.gz",
 ]
+ANNOTATION_URLS = [
+    "https://thor.robots.ox.ac.uk/~vgg/data/pets/annotations.tar.gz",
+    "https://www.robots.ox.ac.uk/~vgg/data/pets/data/annotations.tar.gz",
+]
 
 
-def download_file():
+def download_file(urls=URLS, dest=TAR_PATH):
     os.makedirs(RAW_DIR, exist_ok=True)
-    if os.path.exists(TAR_PATH):
-        print(f"Đã tìm thấy file {TAR_PATH}, bỏ qua bước tải.")
+    if os.path.exists(dest):
+        print(f"Đã tìm thấy file {dest}, bỏ qua bước tải.")
         return
 
-    for url in URLS:
+    for url in urls:
         try:
             print(f"Đang kết nối tới: {url}")
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -27,7 +39,7 @@ def download_file():
                 downloaded = 0
                 chunk_size = 1024 * 256
 
-                with open(TAR_PATH, "wb") as f:
+                with open(dest, "wb") as f:
                     while True:
                         chunk = response.read(chunk_size)
                         if not chunk:
@@ -47,8 +59,8 @@ def download_file():
             return
         except Exception as e:
             print(f"\nKhông tải được từ link này ({e}), đang thử link dự phòng...")
-            if os.path.exists(TAR_PATH):
-                os.remove(TAR_PATH)
+            if os.path.exists(dest):
+                os.remove(dest)
 
     raise RuntimeError("Không thể tải dữ liệu từ cả hai máy chủ.")
 
@@ -82,6 +94,35 @@ def extract_and_filter():
         print(f"  - {breed}: {count} ảnh")
 
 
+def extract_trimaps():
+    """Giải nén trimap (mask do người gán nhãn), chỉ dùng để chấm điểm phân đoạn."""
+    if os.path.isdir(TRIMAP_DIR) and os.listdir(TRIMAP_DIR):
+        print(f"Đã có trimap trong {TRIMAP_DIR}, bỏ qua bước giải nén.")
+        return
+    with tarfile.open(ANNOTATIONS_TAR_PATH, "r:gz") as tar:
+        members = [
+            m for m in tar.getmembers()
+            if m.name.startswith("annotations/trimaps/")
+            and not os.path.basename(m.name).startswith("._")
+        ]
+        tar.extractall(path=RAW_DIR, members=members)
+    print(f"Đã giải nén {len(members)} trimap vào {TRIMAP_DIR}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Tải và lọc bộ Oxford-IIIT Pet.")
+    parser.add_argument(
+        "--trimaps",
+        action="store_true",
+        help="tải thêm trimap để chấm điểm phân đoạn bằng evaluate_segmentation.py",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
     download_file()
     extract_and_filter()
+    if args.trimaps:
+        download_file(ANNOTATION_URLS, ANNOTATIONS_TAR_PATH)
+        extract_trimaps()

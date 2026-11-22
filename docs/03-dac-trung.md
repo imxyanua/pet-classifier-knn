@@ -104,8 +104,8 @@ $$h_i' = -\text{sign}(h_i) \cdot \log_{10}(|h_i| + 10^{-12})$$
 
 Ý tưởng là phân biệt dáng tròn (Pug) với dáng mảnh (Sphynx). Thí nghiệm ở [05-danh-gia.md](05-danh-gia.md) cho thấy:
 
-- **Một mình hình dạng rất yếu:** 5 đặc trưng hình học đạt khoảng 31%, Hu moments khoảng 26%, so với 20% của đoán bừa.
-- **5 đặc trưng hình học vẫn có ích khi gộp với màu:** thêm khoảng 3.7 điểm so với chỉ dùng màu.
+- **Một mình hình dạng rất yếu:** 5 đặc trưng hình học đạt khoảng 31%, Hu moments khoảng 29%, so với 20% của đoán bừa.
+- **5 đặc trưng hình học vẫn có ích khi gộp với màu:** thêm khoảng 2.5 điểm so với chỉ dùng màu.
 - **Hu moments không có ích:** gộp thêm vào không tăng accuracy, nên bị bỏ khỏi bộ mặc định.
 
 Lý do hình dạng yếu:

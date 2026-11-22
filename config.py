@@ -5,6 +5,8 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 RAW_DIR = os.path.join(ROOT_DIR, "raw_data")
 TAR_PATH = os.path.join(RAW_DIR, "images.tar.gz")
+ANNOTATIONS_TAR_PATH = os.path.join(RAW_DIR, "annotations.tar.gz")
+TRIMAP_DIR = os.path.join(RAW_DIR, "annotations", "trimaps")
 CACHE_PATH = os.path.join(ROOT_DIR, "features_cache.npz")
 
 SELECTED_BREEDS = [

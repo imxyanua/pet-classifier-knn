@@ -4,6 +4,11 @@ import cv2
 import numpy as np
 
 PROCESS_SIZE = 192
+GRABCUT_ITERS = 5
+# Thú cưng thường chạm mép ảnh, nên chỉ 1% ngoài cùng bị coi là nền chắc chắn.
+BORDER_SURE_BG = 0.01
+BORDER_PROB_BG = 0.05
+CENTER_SURE_FG = 0.20
 HUE_BINS = 8
 SAT_BINS = 4
 VAL_BINS = 4
@@ -43,18 +48,31 @@ def preprocess(bgr, size=PROCESS_SIZE):
     return cv2.GaussianBlur(resized, (5, 5), 0)
 
 
+def grabcut_init_mask(h, w):
+    """Viền ngoài cùng là nền chắc chắn, dải viền là có thể là nền,
+    elip nhỏ ở tâm là tiền cảnh chắc chắn, phần còn lại là có thể là tiền cảnh."""
+    mask = np.full((h, w), cv2.GC_PR_FGD, np.uint8)
+    for frac, value in ((BORDER_PROB_BG, cv2.GC_PR_BGD), (BORDER_SURE_BG, cv2.GC_BGD)):
+        bx, by = max(1, int(w * frac)), max(1, int(h * frac))
+        mask[:by, :] = value
+        mask[-by:, :] = value
+        mask[:, :bx] = value
+        mask[:, -bx:] = value
+    axes = (max(1, int(w * CENTER_SURE_FG / 2)), max(1, int(h * CENTER_SURE_FG / 2)))
+    cv2.ellipse(mask, (w // 2, h // 2), axes, 0, 0, 360, cv2.GC_FGD, thickness=-1)
+    return mask
+
+
 def segment_pet(bgr):
     """GrabCut + morph + giữ blob lớn nhất."""
     img = preprocess(bgr)
     h, w = img.shape[:2]
-    mask = np.zeros((h, w), np.uint8)
+    mask = grabcut_init_mask(h, w)
     bgd = np.zeros((1, 65), np.float64)
     fgd = np.zeros((1, 65), np.float64)
-    mx, my = int(w * 0.08), int(h * 0.08)
-    rw, rh = max(1, w - 2 * mx), max(1, h - 2 * my)
-    rect = (mx, my, rw, rh)
     try:
-        cv2.grabCut(img, mask, rect, bgd, fgd, 1, cv2.GC_INIT_WITH_RECT)
+        cv2.setRNGSeed(0)
+        cv2.grabCut(img, mask, None, bgd, fgd, GRABCUT_ITERS, cv2.GC_INIT_WITH_MASK)
         binary = np.where(
             (mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 255, 0
         ).astype(np.uint8)

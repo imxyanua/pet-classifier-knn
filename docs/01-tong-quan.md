@@ -28,17 +28,19 @@ Nguồn: [Oxford-IIIT Pet Dataset](https://www.robots.ox.ac.uk/~vgg/data/pets/),
 
 ```text
 config.py              đường dẫn, danh sách giống, các giá trị k, tên hiển thị
-download_data.py       tải images.tar.gz, giải nén, lọc 5 giống vào data/
+download_data.py       tải images.tar.gz, giải nén, lọc 5 giống vào data/; --trimaps tải thêm trimap
 
 features/features.py   load ảnh, tiền xử lý, phân đoạn, trích đặc trưng
+features/segmentation_eval.py  chấm IoU của mask GrabCut so với trimap
 dataset/dataset.py     duyệt data/<giống>/, trích đặc trưng hàng loạt, cache .npz
 knn/knn.py             khoảng cách, chuẩn hóa, chia tập, k-NN, accuracy, confusion matrix, precision/recall/F1
 knn/validation.py      k-fold phân tầng, cross-validation, chọn (khoảng cách, k)
 knn/evaluate.py        chọn tham số bằng CV, đánh giá trên test, lặp nhiều seed
 gui/app.py             desktop app CustomTkinter
-tests/                 unit test cho k-NN, cross-validation, chọn nhóm đặc trưng
+tests/                 unit test cho k-NN, cross-validation, phân đoạn, chọn nhóm đặc trưng
 
-app.py, evaluate.py    điểm chạy ở thư mục gốc, chỉ gọi vào package tương ứng
+app.py, evaluate.py, evaluate_segmentation.py
+                       điểm chạy ở thư mục gốc, chỉ gọi vào package tương ứng
 ```
 
 Các module phụ thuộc theo một chiều, không vòng:
@@ -58,7 +60,7 @@ data/<giống>/*.jpg
    ▼
 ảnh BGR
    │  preprocess          resize cạnh dài 192px, Gaussian 5×5
-   │  segment_pet         GrabCut → morphology → giữ vùng lớn nhất
+   │  segment_pet         GrabCut (mask viền/tâm, 5 vòng) → morphology → giữ vùng lớn nhất
    ▼
 (ảnh 192px, mask nhị phân)
    │  extract_features    màu HSV trong mask + hình dạng contour
@@ -99,6 +101,6 @@ Tập test chỉ xuất hiện ở bước cuối. Mọi quyết định (chọn
 
 ## Cache đặc trưng
 
-Trích đặc trưng 1.000 ảnh mất khoảng 1–2 phút, chủ yếu do GrabCut. Kết quả được lưu vào `features_cache.npz` (gồm `X`, `y`, `paths`, `version`) ở thư mục gốc.
+Trích đặc trưng 1.000 ảnh mất khoảng 1 phút, chủ yếu do GrabCut (khoảng 0.35 giây/ảnh); `extract_dataset` chia ảnh cho nhiều tiến trình chạy song song. Kết quả được lưu vào `features_cache.npz` (gồm `X`, `y`, `paths`, `version`) ở thư mục gốc.
 
 Cache **không tự cập nhật** khi sửa code trong `features/`. Sau khi sửa đặc trưng, cần xóa file cache, nhấn "Tính lại đặc trưng" trong app, hoặc tăng `CACHE_VERSION` trong `dataset/dataset.py`.
