@@ -1,7 +1,17 @@
+import cv2
 import numpy as np
 import pytest
 
 from features import FEATURE_GROUPS, select_feature_groups
+from features.features import grabcut_init_mask
+
+
+def test_grabcut_init_mask_layout():
+    mask = grabcut_init_mask(100, 200)
+    assert mask[0, 0] == cv2.GC_BGD
+    assert mask[3, 100] == cv2.GC_PR_BGD
+    assert mask[50, 100] == cv2.GC_FGD
+    assert mask[50, 40] == cv2.GC_PR_FGD
 
 
 def test_feature_groups_cover_the_34_dim_vector_without_overlap():

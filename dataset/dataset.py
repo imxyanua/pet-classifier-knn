@@ -5,7 +5,7 @@ import numpy as np
 from config import CACHE_PATH, DATA_DIR, SELECTED_BREEDS
 from features import extract_features, load_bgr
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 
 
 def list_samples(data_dir=DATA_DIR):
