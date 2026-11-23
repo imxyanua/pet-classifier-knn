@@ -2,21 +2,22 @@
 
 Code: [`features/features.py`](../features/features.py), các hàm `extract_features`, `_shape_features`, `_safe_hist`.
 
-Mỗi ảnh được biểu diễn bằng một vector 66 chiều:
+Mỗi ảnh được biểu diễn bằng một vector 67 chiều:
 
 | Chỉ số | Nhóm | Số chiều |
 |---|---|---:|
 | 0–2 | Trung bình H, S, V | 3 |
 | 3–5 | Độ lệch chuẩn H, S, V | 3 |
-| 6–21 | Histogram H, 16 bin | 16 |
-| 22–37 | Histogram S, 16 bin | 16 |
-| 38–53 | Histogram V, 16 bin | 16 |
-| 54–58 | Hình học contour | 5 |
-| 59–65 | Hu moments | 7 |
+| 6 | Tỷ lệ pixel không màu | 1 |
+| 7–22 | Histogram H, 16 bin (chỉ pixel có màu) | 16 |
+| 23–38 | Histogram S, 16 bin | 16 |
+| 39–54 | Histogram V, 16 bin | 16 |
+| 55–59 | Hình học contour | 5 |
+| 60–66 | Hu moments | 7 |
 
-Chiều 0–53 là **màu**, 54–65 là **hình dạng**.
+Chiều 0–54 là **màu**, 55–66 là **hình dạng**.
 
-Cả 66 chiều đều được trích và lưu trong cache, nhưng **mặc định chỉ dùng 59 chiều đầu** (màu + hình học); Hu moments bị bỏ. Danh sách nhóm dùng mặc định nằm ở `DEFAULT_FEATURE_GROUPS` trong [`config.py`](../config.py), vị trí từng nhóm ở `FEATURE_GROUPS` trong [`features/features.py`](../features/features.py).
+Cả 67 chiều đều được trích và lưu trong cache, nhưng **mặc định chỉ dùng 60 chiều đầu** (màu + hình học); Hu moments bị bỏ. Danh sách nhóm dùng mặc định nằm ở `DEFAULT_FEATURE_GROUPS` trong [`config.py`](../config.py), vị trí từng nhóm ở `FEATURE_GROUPS` trong [`features/features.py`](../features/features.py).
 
 ## Đặc trưng màu
 
@@ -54,23 +55,20 @@ Kênh H thì khác biệt ít hơn mong đợi; xem phần "Vấn đề của k�
 
 Với tập pixel $P$ nằm trong mask:
 
-- trung bình $\mu_c = \frac{1}{|P|}\sum_{p \in P} p_c$ với $c \in$ {H, S, V}
-- độ lệch chuẩn $\sigma_c$ đo độ đồng đều màu. Bombay và Samoyed có $\sigma$ thấp (một màu), Egyptian Mau có $\sigma_V$ cao (đốm sáng tối xen kẽ).
+- $\mu_S$, $\mu_V$, $\sigma_S$, $\sigma_V$ trên toàn $P$.
+- $\mu_H$, $\sigma_H$ chỉ trên pixel **có màu** ($S \ge 40$ và $V \ge 40$), vì H trên pixel đen/xám gần như nhiễu.
+- **Tỷ lệ không màu** $= |\{p \in P: S < 40 \lor V < 40\}| / |P|$ — cao với Bombay (đen), Samoyed/Mau (trắng/xám), thấp hơn với Pug/Sphynx có màu rõ.
 
 ### Histogram
 
-Đếm số pixel rơi vào từng khoảng giá trị, rồi chia cho tổng để thành tỷ lệ (tổng các bin bằng 1). Chuẩn hóa này làm histogram không phụ thuộc kích thước con vật trong ảnh.
+Đếm số pixel rơi vào từng khoảng giá trị, rồi chia cho tổng để thành tỷ lệ (tổng các bin bằng 1). Histogram H chỉ dùng pixel có màu; S và V dùng toàn mask.
 
-Ban đầu dùng 8/4/4 bin để tránh **lời nguyền số chiều**. Sau khi đo lại, tăng lên **16/16/16** vẫn giúp accuracy (61.1% → 65.4%) vì phân bố màu giữa các giống khác nhau ở mức độ mịn hơn 8/4/4 bắt được; với 800 mẫu train, ~60 chiều vẫn nằm trong vùng k-NN xử lý được.
+Ban đầu dùng 8/4/4 bin; sau đó **16/16/16** (61.1% → 65.4%). Với ~60 chiều và 800 mẫu train, k-NN vẫn xử lý được.
 
 ### Vấn đề của kênh H
 
-Hai vấn đề làm kênh H kém tin cậy hơn S và V:
-
-1. **H là đại lượng vòng tròn.** Giá trị 0 và 179 đều là màu đỏ, nằm sát nhau trên vòng màu, nhưng trung bình số học của chúng là 90 (màu xanh lam). Da hồng của Sphynx nằm đúng vùng đỏ này, nên $\mu_H$ của Sphynx có thể bị kéo lệch.
-2. **H vô nghĩa khi S hoặc V thấp.** Pixel gần đen (Bombay) hoặc gần trắng/xám (Samoyed, Egyptian Mau) có H gần như ngẫu nhiên. Ví dụ Bombay có $\mu_H$ = 60.7, đây chủ yếu là nhiễu chứ không phải màu thật.
-
-Cách khắc phục nằm trong [06-huong-cai-thien.md](06-huong-cai-thien.md).
+1. **H là đại lượng vòng tròn.** Giá trị 0 và 179 đều là đỏ; trung bình số học có thể lệch (đã thử $\cos$/$\sin$, không giữ).
+2. **H vô nghĩa khi S hoặc V thấp** — đã xử lý bằng cách lọc pixel có màu + đặc trưng tỷ lệ không màu (PR #9).
 
 ## Đặc trưng hình dạng
 

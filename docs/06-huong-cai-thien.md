@@ -8,7 +8,7 @@ Các hướng dưới đây dựa trên điểm yếu **đã đo được** ở 
 |---:|---|---|---|
 | 1 | Đánh giá đúng cách: chọn $k$ bằng cross-validation, báo cáo trung bình nhiều seed | **Đã làm** | Con số không thiên lệch: 59.3% ± 3.6 |
 | 2 | Bỏ Hu moments | **Đã làm** | Vector gọn hơn; accuracy không đổi trong ngưỡng dao động |
-| 3 | Làm giàu histogram HSV (16/16/16); thử H vòng tròn / Lab | **Đã làm phần lớn** | Accuracy 61.1% → **65.4% ± 2.1**; H vòng tròn và Lab không giữ |
+| 3 | Làm giàu màu: HSV 16/16/16; H có màu + tỷ lệ không màu | **Đã làm phần lớn** | 61.1% → 65.4% → **67.1% ± 1.7**; H vòng tròn / Lab không giữ |
 | 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | **Đã làm phần lớn** | IoU 0.655 → 0.716; accuracy lúc đó 59.3% → 61.1% |
 | 5 | Cải tiến k-NN: vote theo khoảng cách, khảo sát cosine / χ² | **Đã làm** | 65.4% → **66.6% ± 2.9**; CV luôn chọn Manhattan + vote khoảng cách |
 | 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Một phần | Dễ thử nghiệm, dễ viết báo cáo |
@@ -56,12 +56,15 @@ Màu là nhóm mang phần lớn thông tin (một mình đạt 63.7% với hist
 
 Thay $\mu_H$ bằng $(\cos H, \sin H)$, hoặc thêm thống kê Lab, không vượt rõ baseline và kém hơn 16/16/16 khi so sánh cùng quy trình 10 seed.
 
-### 3c. Còn có thể thử
+### 3c. H trên pixel có màu + tỷ lệ không màu — đã làm
 
-- Chỉ tính H trên pixel có màu thật (S, V đủ cao) + tỷ lệ pixel "không màu".
+Accuracy 66.6% ± 2.9 → **67.1% ± 1.7** (tăng nhẹ, độ lệch chuẩn giảm). Chi tiết ở [CHANGELOG.md](../CHANGELOG.md).
+
+### 3d. Còn có thể thử
+
 - Histogram 2D H–S để giữ tương quan "màu gì và đậm cỡ nào" (cẩn thận số chiều).
 
-### 3d. (Ngoài phạm vi đề) Đặc trưng kết cấu
+### 3e. (Ngoài phạm vi đề) Đặc trưng kết cấu
 
 Cặp nhầm lẫn lớn nhất vẫn liên quan Egyptian Mau. Đặc điểm phân biệt của Mau là **đốm**, tức là kết cấu. LBP hoặc GLCM có thể giúp; đề chỉ yêu cầu màu và hình dạng, nên nếu thêm thì trình bày như thí nghiệm mở rộng.
 
@@ -127,4 +130,4 @@ Nếu thời gian có hạn, thứ tự sau cho nhiều giá trị nhất cho b�
 3. ~~Mục 4a, 4b (đo IoU, cải thiện khởi tạo GrabCut)~~ — đã làm; bảng so sánh các cách khởi tạo nên đưa vào phần phân đoạn của báo cáo.
 4. ~~Mục 3 (histogram HSV mịn hơn)~~ — đã làm.
 5. ~~Mục 5 (vote theo khoảng cách, khảo sát cosine / χ²)~~ — đã làm.
-6. Còn lại nếu còn thời gian: tỷ lệ pixel không màu / histogram 2D H–S; hiện láng giềng bằng ảnh trong app; hoặc (ngoài đề) đặc trưng kết cấu cho Egyptian Mau.
+6. Còn lại nếu còn thời gian: histogram 2D H–S; hiện láng giềng bằng ảnh trong app; hoặc (ngoài đề) đặc trưng kết cấu cho Egyptian Mau.

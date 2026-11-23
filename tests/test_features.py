@@ -72,6 +72,21 @@ def test_extract_features_length_matches_groups():
     assert np.all(np.isfinite(vector))
 
 
+def test_achromatic_ratio_and_hue_ignore_gray_pixels():
+    # Nửa ảnh xám (S=0), nửa đỏ bão hòa → tỷ lệ không màu ~0.5; hist H chỉ từ nửa đỏ.
+    img = np.zeros((40, 40, 3), np.uint8)
+    img[:, :20] = (128, 128, 128)  # BGR xám
+    img[:, 20:] = (0, 0, 220)  # BGR đỏ thuần
+    mask = np.full((40, 40), 255, dtype=np.uint8)
+    vector, _, _ = extract_features(img, mask)
+    achromatic_ratio = vector[6]
+    hist_h = vector[7 : 7 + 16]
+    assert achromatic_ratio == pytest.approx(0.5, abs=0.05)
+    assert hist_h.sum() == pytest.approx(1.0)
+    # Đỏ OpenCV H ≈ 0 → bin đầu chiếm ưu thế
+    assert hist_h[0] == pytest.approx(1.0, abs=0.15)
+
+
 def test_select_feature_groups_on_matrix_and_vector():
     X = np.arange(2 * TOTAL_DIMS).reshape(2, TOTAL_DIMS)
     used = COLOR_DIMS + GEOMETRY_DIMS

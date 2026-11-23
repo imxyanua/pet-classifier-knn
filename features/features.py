@@ -12,8 +12,11 @@ CENTER_SURE_FG = 0.20
 HUE_BINS = 16
 SAT_BINS = 16
 VAL_BINS = 16
+# Pixel dưới ngưỡng này có H gần như nhiễu (đen / xám / trắng).
+CHROMA_S_MIN = 40
+CHROMA_V_MIN = 40
 
-COLOR_STAT_DIMS = 6  # μ_H,S,V + σ_H,S,V; phần còn lại của color là histogram
+COLOR_STAT_DIMS = 7  # μ_H,S,V + σ_H,S,V + tỷ lệ pixel không màu; còn lại là histogram
 COLOR_DIMS = COLOR_STAT_DIMS + HUE_BINS + SAT_BINS + VAL_BINS
 GEOMETRY_DIMS = 5
 HU_DIMS = 7
@@ -168,14 +171,33 @@ def extract_features(bgr, mask=None):
     if len(pixels) == 0:
         pixels = hsv.reshape(-1, 3)
 
-    mean_hsv = pixels.mean(axis=0)
-    std_hsv = pixels.std(axis=0)
-    hist_h = _safe_hist(pixels[:, 0], HUE_BINS, (0, 180))
+    # H chỉ tin cậy khi S và V đủ cao; S/V vẫn tính trên mọi pixel trong mask.
+    chromatic = (pixels[:, 1] >= CHROMA_S_MIN) & (pixels[:, 2] >= CHROMA_V_MIN)
+    achromatic_ratio = 1.0 - float(np.count_nonzero(chromatic)) / float(len(pixels))
+
+    mean_s = float(pixels[:, 1].mean())
+    mean_v = float(pixels[:, 2].mean())
+    std_s = float(pixels[:, 1].std())
+    std_v = float(pixels[:, 2].std())
+    if np.any(chromatic):
+        hue = pixels[chromatic, 0].astype(np.float64)
+        mean_h = float(hue.mean())
+        std_h = float(hue.std())
+        hist_h = _safe_hist(hue, HUE_BINS, (0, 180))
+    else:
+        mean_h = 0.0
+        std_h = 0.0
+        hist_h = np.zeros(HUE_BINS, dtype=np.float64)
+
     hist_s = _safe_hist(pixels[:, 1], SAT_BINS, (0, 256))
     hist_v = _safe_hist(pixels[:, 2], VAL_BINS, (0, 256))
     shape = _shape_features(mask)
 
-    vector = np.concatenate([mean_hsv, std_hsv, hist_h, hist_s, hist_v, shape])
+    color_stats = np.array(
+        [mean_h, mean_s, mean_v, std_h, std_s, std_v, achromatic_ratio],
+        dtype=np.float64,
+    )
+    vector = np.concatenate([color_stats, hist_h, hist_s, hist_v, shape])
     return vector.astype(np.float64), img, mask
 
 
