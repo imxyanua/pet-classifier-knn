@@ -18,4 +18,4 @@ Hình minh họa dùng trong tài liệu:
 - [`segmentation.png`](segmentation.png): ảnh gốc, mask, ảnh chồng mask cho mỗi giống
 - [`segmentation_before_after.png`](segmentation_before_after.png): mask của cách khởi tạo GrabCut cũ và mới, các ảnh thay đổi nhiều nhất
 - [`accuracy_k.png`](accuracy_k.png): accuracy cross-validation trên tập train theo $k$, Euclidean và Manhattan, `seed=42`
-- [`confusion_matrix.png`](confusion_matrix.png): ma trận nhầm lẫn trên test với cấu hình CV chọn (Manhattan, $k=9$, `seed=42`)
+- [`confusion_matrix.png`](confusion_matrix.png): ma trận nhầm lẫn trên test với cấu hình CV chọn (Manhattan, $k=15$, `seed=42`)

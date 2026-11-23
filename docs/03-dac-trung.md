@@ -2,21 +2,21 @@
 
 Code: [`features/features.py`](../features/features.py), các hàm `extract_features`, `_shape_features`, `_safe_hist`.
 
-Mỗi ảnh được biểu diễn bằng một vector 34 chiều:
+Mỗi ảnh được biểu diễn bằng một vector 66 chiều:
 
 | Chỉ số | Nhóm | Số chiều |
 |---|---|---:|
 | 0–2 | Trung bình H, S, V | 3 |
 | 3–5 | Độ lệch chuẩn H, S, V | 3 |
-| 6–13 | Histogram H, 8 bin | 8 |
-| 14–17 | Histogram S, 4 bin | 4 |
-| 18–21 | Histogram V, 4 bin | 4 |
-| 22–26 | Hình học contour | 5 |
-| 27–33 | Hu moments | 7 |
+| 6–21 | Histogram H, 16 bin | 16 |
+| 22–37 | Histogram S, 16 bin | 16 |
+| 38–53 | Histogram V, 16 bin | 16 |
+| 54–58 | Hình học contour | 5 |
+| 59–65 | Hu moments | 7 |
 
-Chiều 0–21 là **màu**, 22–33 là **hình dạng**.
+Chiều 0–53 là **màu**, 54–65 là **hình dạng**.
 
-Cả 34 chiều đều được trích và lưu trong cache, nhưng **mặc định chỉ dùng 27 chiều đầu** (màu + hình học); Hu moments bị bỏ. Danh sách nhóm dùng mặc định nằm ở `DEFAULT_FEATURE_GROUPS` trong [`config.py`](../config.py), vị trí từng nhóm ở `FEATURE_GROUPS` trong [`features/features.py`](../features/features.py).
+Cả 66 chiều đều được trích và lưu trong cache, nhưng **mặc định chỉ dùng 59 chiều đầu** (màu + hình học); Hu moments bị bỏ. Danh sách nhóm dùng mặc định nằm ở `DEFAULT_FEATURE_GROUPS` trong [`config.py`](../config.py), vị trí từng nhóm ở `FEATURE_GROUPS` trong [`features/features.py`](../features/features.py).
 
 ## Đặc trưng màu
 
@@ -61,7 +61,7 @@ Với tập pixel $P$ nằm trong mask:
 
 Đếm số pixel rơi vào từng khoảng giá trị, rồi chia cho tổng để thành tỷ lệ (tổng các bin bằng 1). Chuẩn hóa này làm histogram không phụ thuộc kích thước con vật trong ảnh.
 
-Số bin được chọn ít (8/4/4) vì k-NN chịu ảnh hưởng của **lời nguyền số chiều**: càng nhiều chiều thì khoảng cách giữa các điểm càng gần nhau, láng giềng "gần nhất" càng kém ý nghĩa. Với 800 mẫu train, vector vài chục chiều là hợp lý.
+Ban đầu dùng 8/4/4 bin để tránh **lời nguyền số chiều**. Sau khi đo lại, tăng lên **16/16/16** vẫn giúp accuracy (61.1% → 65.4%) vì phân bố màu giữa các giống khác nhau ở mức độ mịn hơn 8/4/4 bắt được; với 800 mẫu train, ~60 chiều vẫn nằm trong vùng k-NN xử lý được.
 
 ### Vấn đề của kênh H
 

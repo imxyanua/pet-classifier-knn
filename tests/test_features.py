@@ -3,7 +3,13 @@ import numpy as np
 import pytest
 
 from features import FEATURE_GROUPS, select_feature_groups
-from features.features import grabcut_init_mask
+from features.features import (
+    COLOR_DIMS,
+    GEOMETRY_DIMS,
+    HU_DIMS,
+    extract_features,
+    grabcut_init_mask,
+)
 from features.segmentation_eval import failure_type, mask_scores, split_samples
 
 
@@ -46,23 +52,37 @@ def test_split_samples_matches_stratified_split():
     assert split_samples(samples, "all") == samples
 
 
-def test_feature_groups_cover_the_34_dim_vector_without_overlap():
+TOTAL_DIMS = COLOR_DIMS + GEOMETRY_DIMS + HU_DIMS
+
+
+def test_feature_groups_cover_the_vector_without_overlap():
     covered = []
     for sl in FEATURE_GROUPS.values():
         covered.extend(range(sl.start, sl.stop))
-    assert sorted(covered) == list(range(34))
+    assert sorted(covered) == list(range(TOTAL_DIMS))
+
+
+def test_extract_features_length_matches_groups():
+    img = np.zeros((60, 80, 3), np.uint8)
+    img[:, :, 2] = 200
+    mask = np.zeros((60, 80), np.uint8)
+    cv2.rectangle(mask, (20, 15), (60, 45), 255, thickness=-1)
+    vector, _, _ = extract_features(img, mask)
+    assert vector.shape == (TOTAL_DIMS,)
+    assert np.all(np.isfinite(vector))
 
 
 def test_select_feature_groups_on_matrix_and_vector():
-    X = np.arange(2 * 34).reshape(2, 34)
+    X = np.arange(2 * TOTAL_DIMS).reshape(2, TOTAL_DIMS)
+    used = COLOR_DIMS + GEOMETRY_DIMS
     selected = select_feature_groups(X, ["color", "geometry"])
-    assert selected.shape == (2, 27)
-    np.testing.assert_array_equal(selected[0], np.arange(27))
+    assert selected.shape == (2, used)
+    np.testing.assert_array_equal(selected[0], np.arange(used))
 
     vector = select_feature_groups(X[1], ["hu"])
-    np.testing.assert_array_equal(vector, X[1, 27:34])
+    np.testing.assert_array_equal(vector, X[1, used:TOTAL_DIMS])
 
 
 def test_select_feature_groups_rejects_unknown_group():
     with pytest.raises(ValueError):
-        select_feature_groups(np.zeros(34), ["shape"])
+        select_feature_groups(np.zeros(TOTAL_DIMS), ["shape"])
