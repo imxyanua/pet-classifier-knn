@@ -8,8 +8,8 @@ Các hướng dưới đây dựa trên điểm yếu **đã đo được** ở 
 |---:|---|---|---|
 | 1 | Đánh giá đúng cách: chọn $k$ bằng cross-validation, báo cáo trung bình nhiều seed | **Đã làm** | Con số không thiên lệch: 59.3% ± 3.6 |
 | 2 | Bỏ Hu moments | **Đã làm** | Vector gọn hơn; accuracy không đổi trong ngưỡng dao động |
-| 3 | Sửa đặc trưng màu: H dạng vòng tròn, lọc pixel tối/nhạt, thêm Lab | Chưa | Chưa đo; tác động trực tiếp lên nhóm đặc trưng mạnh nhất |
-| 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | **Đã làm phần lớn** | IoU 0.655 → 0.716; accuracy 59.3% → 61.1% |
+| 3 | Làm giàu histogram HSV (16/16/16); thử H vòng tròn / Lab | **Đã làm phần lớn** | Accuracy 61.1% → **65.4% ± 2.1**; H vòng tròn và Lab không giữ |
+| 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | **Đã làm phần lớn** | IoU 0.655 → 0.716; accuracy lúc đó 59.3% → 61.1% |
 | 5 | Cải tiến k-NN: vote theo khoảng cách, khoảng cách chi-square cho histogram | Chưa | Nhỏ đến vừa |
 | 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Một phần | Dễ thử nghiệm, dễ viết báo cáo |
 
@@ -44,35 +44,26 @@ Với độ dao động khoảng ±3 điểm giữa các cách chia, mọi cải
 
 **Còn có thể thử:** đánh trọng số theo nhóm đặc trưng (ví dụ nhân nhóm hình học với hệ số $w$ sau chuẩn hóa) và chọn $w$ bằng CV.
 
-## 3. Cải thiện đặc trưng màu
+## 3. Cải thiện đặc trưng màu — đã làm phần lớn
 
-Màu là nhóm mang phần lớn thông tin (một mình đạt 58.6%), nên cải thiện ở đây có tác động trực tiếp nhất.
+Màu là nhóm mang phần lớn thông tin (một mình đạt 63.7% với histogram hiện tại), nên cải thiện ở đây có tác động trực tiếp nhất.
 
-### 3a. Xử lý H như đại lượng vòng tròn
+### 3a. Histogram HSV mịn hơn — đã làm
 
-H = 0 và H = 179 đều là đỏ nhưng trung bình số học là 90. Thay $\mu_H$ bằng hai giá trị:
+Đổi 8/4/4 → **16/16/16** bin. Accuracy 61.1% ± 2.8 → **65.4% ± 2.1**, CV tăng ở 10/10 seed. Đây là thay đổi đặc trưng màu giữ lại trong pipeline. Chi tiết ở [CHANGELOG.md](../CHANGELOG.md).
 
-$$\bar{c} = \frac{1}{|P|}\sum \cos\left(\frac{2\pi H}{180}\right), \quad \bar{s} = \frac{1}{|P|}\sum \sin\left(\frac{2\pi H}{180}\right)$$
+### 3b. H dạng vòng tròn / Lab — đã thử, không giữ
 
-Độ dài vector $\sqrt{\bar{c}^2 + \bar{s}^2}$ còn cho biết màu có tập trung hay không, dùng thay cho $\sigma_H$.
+Thay $\mu_H$ bằng $(\cos H, \sin H)$, hoặc thêm thống kê Lab, không vượt rõ baseline và kém hơn 16/16/16 khi so sánh cùng quy trình 10 seed.
 
-Ảnh hưởng nhiều nhất tới Sphynx (da hồng nằm đúng vùng H quanh 0/179).
+### 3c. Còn có thể thử
 
-### 3b. Chỉ tính H trên pixel có màu thật
+- Chỉ tính H trên pixel có màu thật (S, V đủ cao) + tỷ lệ pixel "không màu".
+- Histogram 2D H–S để giữ tương quan "màu gì và đậm cỡ nào" (cẩn thận số chiều).
 
-Pixel có S thấp (xám, trắng) hoặc V thấp (đen) có H gần như ngẫu nhiên. Chỉ đưa vào histogram H những pixel có, ví dụ, S > 40 và V > 40. Thêm một đặc trưng **tỷ lệ pixel "không màu"** (S hoặc V thấp): đặc trưng này tự nó đã phân biệt tốt Bombay (gần như toàn đen), Samoyed và Egyptian Mau (phần lớn không màu) với Pug và Sphynx (có màu).
+### 3d. (Ngoài phạm vi đề) Đặc trưng kết cấu
 
-### 3c. Thêm không gian Lab
-
-Trong Lab, L là độ sáng, a là trục xanh lá–đỏ, b là trục xanh dương–vàng. Khoảng cách trong Lab gần với cảm nhận màu của mắt người hơn HSV. Trung bình và độ lệch chuẩn của a, b (4 chiều) phân biệt tốt tông kem (Pug, b dương) với tông hồng (Sphynx, a dương).
-
-### 3d. Histogram 2D H–S
-
-Thay vì hai histogram 1D riêng cho H và S, dùng histogram 2D (ví dụ 8×3 = 24 bin) để giữ được tương quan "màu gì và đậm cỡ nào". Cẩn thận với số chiều: đánh giá lại bằng cross-validation, vì thêm chiều có thể làm k-NN kém đi.
-
-### 3e. (Ngoài phạm vi đề) Đặc trưng kết cấu
-
-Cặp nhầm lẫn lớn nhất là Egyptian Mau ↔ Sphynx, và Mau còn hay bị nhầm với Samoyed. Đặc điểm phân biệt của Mau là **đốm**, tức là kết cấu chứ không phải màu hay hình dạng. Một histogram LBP (Local Binary Pattern) hoặc thống kê từ ma trận đồng xuất hiện mức xám (GLCM) sẽ mô tả được đốm. Đề chỉ yêu cầu màu và hình dạng, nên nếu thêm thì trình bày như một **thí nghiệm mở rộng**, so sánh có và không có kết cấu.
+Cặp nhầm lẫn lớn nhất vẫn liên quan Egyptian Mau. Đặc điểm phân biệt của Mau là **đốm**, tức là kết cấu. LBP hoặc GLCM có thể giúp; đề chỉ yêu cầu màu và hình dạng, nên nếu thêm thì trình bày như thí nghiệm mở rộng.
 
 ## 4. Đo và cải thiện phân đoạn — đã làm phần lớn
 

@@ -10,11 +10,32 @@ Trừ khi ghi khác, accuracy là accuracy trên tập test, trung bình ± đ�
 |---|---:|---:|---|
 | Phiên bản đầu (18/11) | 58.0% | 0.655 | $k$ chọn trên chính tập test, một seed: con số lạc quan, không so sánh trực tiếp được |
 | PR #1 (18/11) | 59.3% ± 3.6 | 0.655 | Cách đánh giá đúng đầu tiên |
-| PR #2 (22/11) | **61.1% ± 2.8** | **0.716** | Đổi cách khởi tạo GrabCut |
+| PR #2 (22/11) | 61.1% ± 2.8 | **0.716** | Đổi cách khởi tạo GrabCut |
 | PR #3, #5 (23/11) | 61.1% ± 2.8 | 0.716 | Chỉ thêm công cụ đo và ghi lại thử nghiệm |
+| PR #7 (23/11) | **65.4% ± 2.1** | 0.716 | Histogram HSV mịn hơn (16/16/16) |
 | Oracle (tham khảo) | 72.5% ± 2.0 | 1.0 | Đặc trưng tính trên trimap, tức phân đoạn hoàn hảo; không thuộc pipeline |
 
 ## [Chưa phát hành]
+
+## 2026-11-23 — Histogram HSV mịn hơn
+
+PR [#7](https://github.com/imxyanua/pet-classifier-knn/pull/7).
+
+Sau khi phân đoạn gần như bão hòa (khoảng cách tới oracle ~11 điểm), hướng tiếp theo là làm giàu đặc trưng màu — nhóm mang phần lớn thông tin nhận dạng.
+
+**Thay đổi giữ lại**
+- Histogram HSV từ 8/4/4 bin → **16/16/16** bin (màu 22 → 54 chiều; mặc định màu + hình học 27 → 59 chiều).
+- `CACHE_VERSION` 2 → 3 để buộc trích lại cache.
+- Test đặc trưng không còn gắn cứng số 34; dùng `COLOR_DIMS` / `GEOMETRY_DIMS` / `HU_DIMS`.
+
+**Kết quả:** accuracy 61.1% ± 2.8 → **65.4% ± 2.1** (thấp nhất 63.5%, cao nhất 70.0%); accuracy cross-validation tăng ở cả 10/10 seed. `seed=42` chọn Manhattan $k=15$, test 63.5%. Chỉ màu đạt 63.7% ± 2.5; thêm Hu đạt 66.6% ± 2.4 (chênh trong ngưỡng dao động, mặc định vẫn bỏ Hu).
+
+**Đã thử, không giữ** (không vượt rõ baseline 61.1% hoặc kém hơn 16/16/16)
+- H dạng vòng tròn ($\cos$/$\sin$) thay $\mu_H$.
+- Thống kê Lab thêm vào vector màu.
+- Các biến thể bin khác (ví dụ chỉ tăng H).
+
+**Kết luận:** với mask hiện tại, tăng độ phân giải histogram HSV là cách tăng accuracy rõ nhất trong các chỉnh sửa đặc trưng màu đã thử. Phân đoạn vẫn là trần cứng (oracle 72.5%); bước tiếp theo hợp lý là cải tiến khoảng cách/vote của k-NN hoặc (ngoài đề) đặc trưng kết cấu cho Egyptian Mau.
 
 ## 2026-11-23 — Thử nghiệm cải thiện phân đoạn
 
@@ -77,7 +98,7 @@ PR [#1](https://github.com/imxyanua/pet-classifier-knn/pull/1).
 ## 2026-11-18 — Pipeline đầu tiên
 
 - Tiền xử lý (resize 192px, Gaussian blur) và phân đoạn bằng GrabCut.
-- Đặc trưng 34 chiều: màu HSV (thống kê + histogram) và hình dạng (5 đặc trưng hình học + 7 Hu moments).
+- Đặc trưng màu HSV (thống kê + histogram) và hình dạng (5 đặc trưng hình học + 7 Hu moments); lúc đó 34 chiều với histogram 8/4/4.
 - k-NN tự cài bằng NumPy (Euclidean, Manhattan), chuẩn hóa z-score, chia tập phân tầng, accuracy, ma trận nhầm lẫn. Không dùng scikit-learn.
 - Cache đặc trưng vào `features_cache.npz`.
 - `evaluate.py` khảo sát $k$ và khoảng cách.
