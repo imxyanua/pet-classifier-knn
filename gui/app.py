@@ -18,10 +18,12 @@ from config import (
     K_CHOICES,
     METRIC_LABELS,
     SELECTED_BREEDS,
+    VOTE_LABELS,
 )
 from dataset import load_feature_cache, load_or_extract
 from features import (
     features_and_preview,
+    histogram_mask,
     load_bgr,
     overlay_mask,
     segment_pet,
@@ -32,10 +34,9 @@ from knn import (
     confusion_matrix,
     knn_predict_batch,
     knn_predict_one,
-    standardize_apply,
-    standardize_fit,
     stratified_split,
 )
+from knn.validation import prepare_features
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -66,8 +67,7 @@ class PetClassifierApp(ctk.CTk):
         self.X = None
         self.y = None
         self.paths = None
-        self.mean = None
-        self.std = None
+        self.hist_mask = None
         self.train_idx = None
         self.test_idx = None
         self.current_path = None
@@ -138,8 +138,13 @@ class PetClassifierApp(ctk.CTk):
         self.metric_seg = ctk.CTkSegmentedButton(
             side, values=list(METRIC_LABELS.keys())
         )
-        self.metric_seg.set("Euclidean")
-        self.metric_seg.pack(fill="x", padx=14, pady=(4, 16))
+        self.metric_seg.set("Manhattan")
+        self.metric_seg.pack(fill="x", padx=14, pady=(4, 8))
+
+        ctk.CTkLabel(side, text="Vote", anchor="w").pack(fill="x", padx=14)
+        self.vote_seg = ctk.CTkSegmentedButton(side, values=list(VOTE_LABELS.keys()))
+        self.vote_seg.set("Theo khoảng cách")
+        self.vote_seg.pack(fill="x", padx=14, pady=(4, 16))
 
         self.result_title = ctk.CTkLabel(
             side, text="Chưa có dự đoán", font=ctk.CTkFont(size=18, weight="bold")
@@ -221,6 +226,9 @@ class PetClassifierApp(ctk.CTk):
     def _metric(self):
         return METRIC_LABELS[self.metric_seg.get()]
 
+    def _vote(self):
+        return VOTE_LABELS[self.vote_seg.get()]
+
     def _set_status(self, text):
         self.status.configure(text=text)
 
@@ -250,10 +258,10 @@ class PetClassifierApp(ctk.CTk):
         )
 
     def _store_dataset(self, X, y, paths):
+        self.hist_mask = histogram_mask(DEFAULT_FEATURE_GROUPS)
         X = select_feature_groups(X, DEFAULT_FEATURE_GROUPS)
         self.X, self.y, self.paths = X, y, paths
         self.train_idx, self.test_idx = stratified_split(y, test_ratio=0.2, seed=42)
-        self.mean, self.std = standardize_fit(X[self.train_idx])
 
     def open_image(self):
         path = filedialog.askopenfilename(
@@ -289,15 +297,27 @@ class PetClassifierApp(ctk.CTk):
             self._show_bgr(self.orig_label, img, "orig")
             self._show_bgr(self.seg_label, preview, "seg")
             vector = select_feature_groups(vector, DEFAULT_FEATURE_GROUPS)
-            x = standardize_apply(vector[None, :], self.mean, self.std)[0]
-            X_train = standardize_apply(self.X[self.train_idx], self.mean, self.std)
+            metric = self._metric()
+            vote = self._vote()
+            X_train, X_query, _, _ = prepare_features(
+                self.X[self.train_idx],
+                vector[None, :],
+                metric,
+                self.hist_mask,
+            )
             y_train = self.y[self.train_idx]
             k = self.k_var.get()
             pred, dists, labels = knn_predict_one(
-                x, X_train, y_train, k=k, metric=self._metric()
+                X_query[0],
+                X_train,
+                y_train,
+                k=k,
+                metric=metric,
+                vote=vote,
+                hist_mask=self.hist_mask,
             )
             self.result_title.configure(text=DISPLAY_NAMES.get(pred, pred))
-            lines = [f"k = {k} · {self.metric_seg.get()}", ""]
+            lines = [f"k = {k} · {self.metric_seg.get()} · {self.vote_seg.get()}", ""]
             for i, (lab, dist) in enumerate(zip(labels, dists), start=1):
                 lines.append(f"{i}. {DISPLAY_NAMES.get(lab, lab):<16}  d = {dist:.3f}")
             self._set_textbox(self.neighbor_box, "\n".join(lines))
@@ -313,32 +333,48 @@ class PetClassifierApp(ctk.CTk):
         self.rebuild_btn.configure(state="disabled")
         self._set_status("Đang trích đặc trưng / đánh giá…")
         metric = self._metric()
+        vote = self._vote()
         active_k = max(1, int(self.k_var.get()))
         threading.Thread(
             target=self._eval_worker,
-            args=(force, metric, active_k),
+            args=(force, metric, vote, active_k),
             daemon=True,
         ).start()
 
-    def _eval_worker(self, force, metric, active_k):
+    def _eval_worker(self, force, metric, vote, active_k):
         try:
             X, y, paths = load_or_extract(progress=self._progress_from_thread, force=force)
+            hist = histogram_mask(DEFAULT_FEATURE_GROUPS)
             X_used = select_feature_groups(X, DEFAULT_FEATURE_GROUPS)
             train_idx, test_idx = stratified_split(y, test_ratio=0.2, seed=42)
-            mean, std = standardize_fit(X_used[train_idx])
-            X_train = standardize_apply(X_used[train_idx], mean, std)
-            X_test = standardize_apply(X_used[test_idx], mean, std)
+            X_train, X_test, _, _ = prepare_features(
+                X_used[train_idx], X_used[test_idx], metric, hist
+            )
             y_train, y_test = y[train_idx], y[test_idx]
 
             k_scores = []
             for k in K_CHOICES:
-                preds = knn_predict_batch(X_test, X_train, y_train, k=k, metric=metric)
+                preds = knn_predict_batch(
+                    X_test,
+                    X_train,
+                    y_train,
+                    k=k,
+                    metric=metric,
+                    vote=vote,
+                    hist_mask=hist,
+                )
                 k_scores.append(accuracy_score(y_test, preds))
 
             best_i = int(np.argmax(k_scores))
             best_k = K_CHOICES[best_i]
             preds = knn_predict_batch(
-                X_test, X_train, y_train, k=active_k, metric=metric
+                X_test,
+                X_train,
+                y_train,
+                k=active_k,
+                metric=metric,
+                vote=vote,
+                hist_mask=hist,
             )
             acc = accuracy_score(y_test, preds)
             cm = confusion_matrix(y_test, preds, SELECTED_BREEDS)
@@ -354,6 +390,7 @@ class PetClassifierApp(ctk.CTk):
                 "n_train": len(train_idx),
                 "n_test": len(test_idx),
                 "metric": metric,
+                "vote": vote,
             }
             self.after(0, lambda p=payload: self._eval_done(p))
         except Exception as exc:
@@ -374,7 +411,8 @@ class PetClassifierApp(ctk.CTk):
         self.progress.set(1)
         lines = [
             f"Tập: {payload['n_train']} train · {payload['n_test']} test · 5 lớp",
-            f"Khoảng cách: {payload['metric']} · k đang chọn = {payload['active_k']}",
+            f"Khoảng cách: {payload['metric']} · vote={payload['vote']} · "
+            f"k đang chọn = {payload['active_k']}",
             f"Accuracy (k={payload['active_k']}): {payload['acc'] * 100:.2f}%",
             f"k cho accuracy test cao nhất: k={payload['best_k']} "
             f"({max(payload['k_scores']) * 100:.2f}%) · chỉ để minh họa, "

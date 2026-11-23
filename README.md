@@ -15,7 +15,7 @@ Mỗi ảnh đi qua pipeline sau:
     ảnh gốc -> resize (cạnh dài 192px) -> Gaussian blur 5×5 ↩
             -> GrabCut (khởi tạo bằng mask viền/tâm, 5 vòng) + morphology + giữ vùng lớn nhất -> mask đối tượng ↩
             -> đặc trưng màu (HSV) + đặc trưng hình học (contour) -> vector 59 chiều ↩
-            -> chuẩn hóa z-score -> k-NN (Euclidean / Manhattan) -> nhãn giống
+            -> chuẩn hóa z-score -> k-NN (Manhattan + vote theo khoảng cách, …) -> nhãn giống
 
 ## Tổng quan
 
@@ -25,7 +25,7 @@ Mỗi ảnh đi qua pipeline sau:
 |---|---|
 | Tiền xử lý và phân đoạn đối tượng | Resize, làm mờ, GrabCut, đóng/mở hình thái học, giữ contour lớn nhất; chất lượng mask được chấm bằng IoU so với trimap của Oxford |
 | Trích đặc trưng màu và hình dạng | Thống kê và histogram HSV trên vùng đối tượng; tỷ lệ khung, độ đặc, độ tròn, độ thon (Hu moments có trích nhưng không dùng mặc định) |
-| Cài đặt k-NN, khảo sát ảnh hưởng của $k$ hoặc khoảng cách | k-NN tự viết; khảo sát $k$ từ 1 đến 25 với cả Euclidean và Manhattan bằng cross-validation |
+| Cài đặt k-NN, khảo sát ảnh hưởng của $k$ hoặc khoảng cách | k-NN tự viết; CV chọn $k$, metric (Euclidean/Manhattan/Cosine/χ²) và kiểu vote |
 | Đánh giá bằng độ chính xác và ma trận nhầm lẫn | Accuracy, confusion matrix 5×5, precision / recall / F1 theo lớp, đều tự cài |
 
 Ngoài ra có một desktop app (CustomTkinter) để nhận dạng từng ảnh và xem kết quả đánh giá trực quan.
@@ -43,8 +43,8 @@ Tập test không được dùng để chọn $k$, nên con số báo cáo là �
 
 | | Accuracy trên test |
 |---|---:|
-| Trung bình 10 seed | **65.4% ± 2.1%** (thấp nhất 63.5%, cao nhất 70.0%) |
-| `seed=42` (CV chọn Manhattan, $k=15$) | 63.5% |
+| Trung bình 10 seed | **66.6% ± 2.9%** (thấp nhất 62.0%, cao nhất 72.0%) |
+| `seed=42` (CV chọn Manhattan, vote theo khoảng cách, $k=15$) | 66.0% |
 
 Đoán ngẫu nhiên với 5 lớp chỉ đạt 20%.
 
@@ -54,11 +54,11 @@ Tập test không được dùng để chọn $k$, nên con số báo cáo là �
 
 Nhận xét:
 
-- **Manhattan tốt hơn Euclidean ở gần như mọi giá trị $k$**, và được CV chọn ở cả 10 seed. Khoảng cách L1 ít bị chi phối bởi một vài chiều lệch lớn, phù hợp khi vector trộn nhiều loại đặc trưng.
-- **$k$ nhỏ kém rõ rệt**: $k=1$ chỉ đạt khoảng 58–60%, vì một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn lỗi. Accuracy tăng tới khoảng $k=15$ rồi gần như phẳng tới $k=25$.
-- **Bombay** nhận dạng tốt nhất (30/40) nhờ màu lông đen tuyền; **Samoyed** và **Pug** theo sau (28 và 27/40).
-- **Egyptian Mau** hay bị nhầm thành Pug (7 ảnh) hoặc Samoyed/Bombay (6 mỗi bên); **Sphynx** hay bị nhầm thành Samoyed (7) và Egyptian Mau (6). Nét phân biệt của Mau là đốm, tức kết cấu, không nằm trong đặc trưng màu hay hình dạng.
-- **Pug** có precision thấp nhất (50%): nhiều ảnh của giống khác bị đoán là Pug. Mask của Pug thường không đầy đủ (chỉ lấy được mặt) nên đặc trưng Pug trải rộng.
+- **Manhattan + vote theo khoảng cách** được CV chọn ở cả 10 seed. Vote $1/(d+\varepsilon)$ cho láng giềng gần tiếng nói lớn hơn; trên CV cao hơn vote đều khoảng 1–2 điểm. Cosine và χ² nằm trong bảng khảo sát nhưng không được chọn.
+- **$k$ nhỏ kém rõ rệt**: $k=1$ chỉ đạt khoảng 58–60%, vì một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn lỗi. Accuracy tăng tới khoảng $k=15$–$19$ rồi gần như phẳng tới $k=25$.
+- **Bombay** nhận dạng tốt nhất (31/40) nhờ màu lông đen tuyền; **Samoyed** và **Pug** theo sau (29 và 27/40).
+- **Egyptian Mau** hay bị nhầm thành Pug/Samoyed/Bombay; **Sphynx** hay bị nhầm thành Samoyed và Egyptian Mau. Nét phân biệt của Mau là đốm, tức kết cấu, không nằm trong đặc trưng màu hay hình dạng.
+- **Pug** có precision thấp (~53%): nhiều ảnh của giống khác bị đoán là Pug. Mask của Pug thường không đầy đủ (chỉ lấy được mặt) nên đặc trưng Pug trải rộng.
 
 ### Đóng góp của từng nhóm đặc trưng
 
@@ -67,7 +67,7 @@ Cùng quy trình trên, 10 seed:
 | Đặc trưng | Số chiều | Accuracy |
 |---|---:|---:|
 | Màu + hình học + Hu | 66 | 66.6% ± 2.4 |
-| **Màu + hình học (mặc định)** | 59 | **65.4% ± 2.1** |
+| **Màu + hình học (mặc định)** | 59 | **66.6% ± 2.9** |
 | Chỉ màu | 54 | 63.7% ± 2.5 |
 | Chỉ hình học | 5 | 31.1% ± 3.5 |
 | Chỉ Hu moments | 7 | 29.3% ± 0.8 |
@@ -84,7 +84,7 @@ Trimap của bộ Oxford (mask do người gán nhãn) được dùng **chỉ đ
 | Hình chữ nhật cách mép 8%, 1 vòng (cũ) | 0.655 | 27.4% | 59.3% ± 3.6 |
 | **Mask viền/tâm, 5 vòng (hiện tại)** | **0.716** | **22.1%** | 61.1% ± 2.8 (trước khi tinh chỉnh histogram) |
 
-Với cùng mask đó, tăng độ phân giải histogram HSV (16/16/16) đưa accuracy lên **65.4% ± 2.1** — xem [CHANGELOG.md](CHANGELOG.md).
+Với cùng mask đó, histogram HSV 16/16/16 rồi vote theo khoảng cách đưa accuracy lên **66.6% ± 2.9** — xem [CHANGELOG.md](CHANGELOG.md).
 
 Cách cũ coi toàn bộ 8% sát mép là nền chắc chắn, nên mọi phần con vật chạm mép ảnh (rất phổ biến với ảnh thú cưng) đều bị cắt mất; khi con vật chiếm gần hết khung hình, mask thường rỗng. Cách mới chỉ coi 1% ngoài cùng là nền chắc chắn, dải 5% tiếp theo là "có thể là nền", và một elip nhỏ ở tâm ảnh là "chắc chắn là con vật".
 
@@ -132,11 +132,11 @@ Trước khi đưa vào k-NN, mỗi chiều được chuẩn hóa z-score bằng
 
 Cài trong [`knn/knn.py`](knn/knn.py) và [`knn/validation.py`](knn/validation.py):
 
-- `euclidean_distances`, `manhattan_distances`: khoảng cách từ một mẫu đến toàn bộ tập train
-- `knn_predict_one`: chọn k mẫu gần nhất bằng `argpartition`, vote theo đa số; nếu hòa thì chọn lớp có khoảng cách trung bình nhỏ hơn
+- `euclidean_distances`, `manhattan_distances`, `cosine_distances`, `chi_square_distances`: khoảng cách từ một mẫu đến toàn bộ tập train
+- `knn_predict_one`: chọn k mẫu gần nhất bằng `argpartition`; vote đều hoặc theo khoảng cách $1/(d+\varepsilon)$; hòa thì chọn lớp có khoảng cách trung bình nhỏ hơn
 - `stratified_split`: chia train/test giữ tỷ lệ mỗi lớp
-- `standardize_fit`, `standardize_apply`: chuẩn hóa z-score
-- `stratified_k_fold`, `cross_val_accuracy`, `select_params`: cross-validation và chọn (khoảng cách, $k$)
+- `standardize_fit`, `standardize_apply`: chuẩn hóa z-score (χ² giữ nguyên cột histogram)
+- `stratified_k_fold`, `cross_val_accuracy`, `select_params`: cross-validation và chọn (metric, vote, $k$)
 - `accuracy_score`, `confusion_matrix`, `per_class_metrics`: đánh giá
 
 ## Cấu trúc thư mục
@@ -265,7 +265,7 @@ python app.py
 **Tab Nhận dạng**
 
 - **Mở ảnh…**: chọn một ảnh bất kỳ; app hiển thị ảnh gốc và vùng đối tượng sau phân đoạn
-- thanh trượt **k** (1–25) và nút chọn **Euclidean / Manhattan**
+- thanh trượt **k** (1–25), chọn khoảng cách (Euclidean / Manhattan / Cosine / Chi-square) và kiểu vote
 - **Nhận dạng**: hiện giống dự đoán và danh sách k láng giềng gần nhất kèm khoảng cách
 
 **Tab Đánh giá**

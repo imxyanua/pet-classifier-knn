@@ -13,7 +13,8 @@ HUE_BINS = 16
 SAT_BINS = 16
 VAL_BINS = 16
 
-COLOR_DIMS = 6 + HUE_BINS + SAT_BINS + VAL_BINS
+COLOR_STAT_DIMS = 6  # μ_H,S,V + σ_H,S,V; phần còn lại của color là histogram
+COLOR_DIMS = COLOR_STAT_DIMS + HUE_BINS + SAT_BINS + VAL_BINS
 GEOMETRY_DIMS = 5
 HU_DIMS = 7
 FEATURE_GROUPS = {
@@ -29,6 +30,20 @@ def select_feature_groups(X, groups):
     if unknown:
         raise ValueError(f"Nhóm đặc trưng không hợp lệ: {', '.join(unknown)}")
     return np.concatenate([X[..., FEATURE_GROUPS[g]] for g in groups], axis=-1)
+
+
+def histogram_mask(groups):
+    """Mask boolean: cột nào trong ma trận đã chọn là bin histogram HSV (chưa z-score khi dùng χ²)."""
+    width = sum(FEATURE_GROUPS[g].stop - FEATURE_GROUPS[g].start for g in groups)
+    mask = np.zeros(width, dtype=bool)
+    offset = 0
+    for g in groups:
+        sl = FEATURE_GROUPS[g]
+        group_width = sl.stop - sl.start
+        if g == "color":
+            mask[offset + COLOR_STAT_DIMS : offset + group_width] = True
+        offset += group_width
+    return mask
 
 
 def load_bgr(path):

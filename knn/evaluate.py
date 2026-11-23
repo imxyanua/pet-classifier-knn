@@ -1,5 +1,5 @@
 # code by xyanua - github.com/imxyanua
-"""Đánh giá k-NN: chọn (khoảng cách, k) bằng cross-validation trên train, báo cáo trên test."""
+"""Đánh giá k-NN: chọn (khoảng cách, vote, k) bằng cross-validation trên train, báo cáo trên test."""
 import argparse
 from collections import Counter
 
@@ -7,19 +7,19 @@ import numpy as np
 
 from config import DEFAULT_FEATURE_GROUPS, DISPLAY_NAMES, K_CHOICES, SELECTED_BREEDS
 from dataset import load_or_extract
-from features import FEATURE_GROUPS, select_feature_groups
+from features import FEATURE_GROUPS, histogram_mask, select_feature_groups
 from knn import (
     accuracy_score,
     confusion_matrix,
     knn_predict_batch,
     per_class_metrics,
     select_params,
-    standardize_apply,
-    standardize_fit,
     stratified_split,
 )
+from knn.validation import prepare_features
 
-METRICS = ["euclidean", "manhattan"]
+METRICS = ["euclidean", "manhattan", "cosine", "chi_square"]
+VOTES = ["uniform", "distance"]
 
 
 def parse_args(argv=None):
@@ -40,18 +40,34 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def run_once(X, y, seed, n_folds):
+def run_once(X, y, seed, n_folds, hist_mask=None):
     """Chia train/test, chọn tham số bằng CV trên train, đánh giá đúng một lần trên test."""
     train_idx, test_idx = stratified_split(y, test_ratio=0.2, seed=seed)
-    (metric, k, cv_acc), grid = select_params(
-        X[train_idx], y[train_idx], K_CHOICES, METRICS, n_folds=n_folds, seed=seed
+    (metric, vote, k, cv_acc), grid = select_params(
+        X[train_idx],
+        y[train_idx],
+        K_CHOICES,
+        METRICS,
+        n_folds=n_folds,
+        seed=seed,
+        votes=VOTES,
+        hist_mask=hist_mask,
     )
-    mean, std = standardize_fit(X[train_idx])
-    X_train = standardize_apply(X[train_idx], mean, std)
-    X_test = standardize_apply(X[test_idx], mean, std)
-    preds = knn_predict_batch(X_test, X_train, y[train_idx], k=k, metric=metric)
+    X_train, X_test, _, _ = prepare_features(
+        X[train_idx], X[test_idx], metric, hist_mask
+    )
+    preds = knn_predict_batch(
+        X_test,
+        X_train,
+        y[train_idx],
+        k=k,
+        metric=metric,
+        vote=vote,
+        hist_mask=hist_mask,
+    )
     return {
         "metric": metric,
+        "vote": vote,
         "k": k,
         "cv_acc": cv_acc,
         "grid": grid,
@@ -66,13 +82,18 @@ def print_detailed(result, seed, n_folds):
     print(f"\n=== Chi tiết với seed={seed} ===")
     print(f"Train {result['n_train']} · Test {result['n_test']}")
     print(f"\nAccuracy cross-validation {n_folds} fold trên tập train:")
-    print(f"{'k':>4}  " + "  ".join(f"{m:>10}" for m in METRICS))
-    for k in K_CHOICES:
-        row = "  ".join(f"{result['grid'][(m, k)] * 100:9.2f}%" for m in METRICS)
-        print(f"{k:>4}  {row}")
+    # In từng kiểu vote một bảng để dễ đọc
+    for vote in VOTES:
+        print(f"\nvote={vote}")
+        print(f"{'k':>4}  " + "  ".join(f"{m:>10}" for m in METRICS))
+        for k in K_CHOICES:
+            row = "  ".join(
+                f"{result['grid'][(m, vote, k)] * 100:9.2f}%" for m in METRICS
+            )
+            print(f"{k:>4}  {row}")
 
     print(
-        f"\nChọn theo CV: {result['metric']}, k={result['k']} "
+        f"\nChọn theo CV: {result['metric']}, vote={result['vote']}, k={result['k']} "
         f"(CV {result['cv_acc'] * 100:.2f}%)"
     )
     print(f"Accuracy trên test: {result['test_acc'] * 100:.2f}%")
@@ -93,24 +114,30 @@ def print_detailed(result, seed, n_folds):
     print(f"{'trung bình':<16}{precision.mean() * 100:9.1f}%{recall.mean() * 100:9.1f}%{f1.mean() * 100:9.1f}%")
 
 
-def print_repeated(X, y, repeats, n_folds):
+def print_repeated(X, y, repeats, n_folds, hist_mask=None):
     print(f"\n=== Lặp {repeats} lần (seed 0..{repeats - 1}) ===")
     accs = []
     chosen = Counter()
     for seed in range(repeats):
-        result = run_once(X, y, seed, n_folds)
+        result = run_once(X, y, seed, n_folds, hist_mask=hist_mask)
         accs.append(result["test_acc"])
-        chosen[(result["metric"], result["k"])] += 1
+        chosen[(result["metric"], result["vote"], result["k"])] += 1
         print(
-            f"seed {seed:>2}: chọn {result['metric']:<9} k={result['k']:<2}  "
-            f"CV {result['cv_acc'] * 100:5.1f}%  test {result['test_acc'] * 100:5.1f}%"
+            f"seed {seed:>2}: chọn {result['metric']:<10} vote={result['vote']:<8} "
+            f"k={result['k']:<2}  CV {result['cv_acc'] * 100:5.1f}%  "
+            f"test {result['test_acc'] * 100:5.1f}%"
         )
     accs = np.array(accs)
     print(
         f"\nAccuracy trên test: {accs.mean() * 100:.1f}% ± {accs.std() * 100:.1f}% "
         f"(thấp nhất {accs.min() * 100:.1f}%, cao nhất {accs.max() * 100:.1f}%)"
     )
-    print("Cấu hình được chọn: " + ", ".join(f"{m} k={k} ×{n}" for (m, k), n in chosen.most_common()))
+    print(
+        "Cấu hình được chọn: "
+        + ", ".join(
+            f"{m}/{v} k={k} ×{n}" for (m, v, k), n in chosen.most_common()
+        )
+    )
 
 
 def main(argv=None):
@@ -122,14 +149,19 @@ def main(argv=None):
         progress=lambda i, n, p: print(f"\r{i}/{n}", end="", flush=True)
     )
     try:
+        hist = histogram_mask(groups)
         X = select_feature_groups(X, groups)
     except ValueError as exc:
         raise SystemExit(str(exc))
     print(f"{len(y)} mẫu · {X.shape[1]} chiều ({', '.join(groups)})")
 
-    print_detailed(run_once(X, y, args.seed, args.folds), args.seed, args.folds)
+    print_detailed(
+        run_once(X, y, args.seed, args.folds, hist_mask=hist),
+        args.seed,
+        args.folds,
+    )
     if args.repeats > 0:
-        print_repeated(X, y, args.repeats, args.folds)
+        print_repeated(X, y, args.repeats, args.folds, hist_mask=hist)
 
 
 if __name__ == "__main__":

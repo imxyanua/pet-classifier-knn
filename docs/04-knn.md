@@ -38,9 +38,23 @@ $$d_2(x, x_i) = \sqrt{\sum_{j=1}^{d} (x_j - x_{ij})^2}$$
 
 $$d_1(x, x_i) = \sum_{j=1}^{d} |x_j - x_{ij}|$$
 
-Khác biệt chính: L2 bình phương độ lệch nên **một chiều lệch lớn chi phối cả tổng**. L1 cộng tuyến tính nên mỗi chiều đóng góp đều hơn. Khi vector gộp nhiều nhóm đặc trưng và có một số chiều nhiễu (như Hu moments), L1 thường ổn định hơn. Kết quả thí nghiệm khớp với điều này: Manhattan tốt hơn hoặc bằng Euclidean ở mọi $k$.
+**Cosine**
 
-Cả hai hàm đều tính vector hóa: `X_train - x` dùng broadcasting của NumPy để trừ $x$ khỏi mọi dòng cùng lúc, cho ra $N$ khoảng cách trong một lệnh.
+$$d_{\cos}(x, x_i) = 1 - \frac{x \cdot x_i}{\|x\|\,\|x_i\|}$$
+
+Chỉ quan tâm hướng của vector, bỏ qua độ lớn.
+
+**Chi-square (hybrid)**
+
+Trên các bin histogram (giữ nguyên, không z-score):
+
+$$\chi^2(h, h') = \frac{1}{2}\sum_i \frac{(h_i - h'_i)^2}{h_i + h'_i + \varepsilon}$$
+
+Cộng thêm Manhattan trên phần còn lại (thống kê màu + hình học, đã z-score). χ² phù hợp histogram hơn L1/L2 về mặt lý thuyết, nhưng trên dữ liệu này CV không chọn nó.
+
+Khác biệt L2 vs L1: L2 bình phương độ lệch nên **một chiều lệch lớn chi phối cả tổng**. L1 cộng tuyến tính nên mỗi chiều đóng góp đều hơn. Kết quả thí nghiệm: **Manhattan tốt nhất**; cosine gần Euclidean; χ² kém hơn rõ.
+
+Các hàm khoảng cách tính vector hóa bằng broadcasting của NumPy.
 
 ## Tìm k láng giềng
 
@@ -54,15 +68,17 @@ nn = nn[np.argsort(dists[nn])]              # sắp xếp k phần tử đó
 
 ## Vote
 
-Chọn nhãn xuất hiện nhiều nhất trong $k$ láng giềng. Nếu hai nhãn **hòa số phiếu**, chọn nhãn có khoảng cách trung bình nhỏ hơn.
+Hai cách gộp phiếu (CV chọn giữa chúng):
+
+1. **Đều (uniform):** mỗi láng giềng 1 phiếu — đa số thắng. Hòa thì chọn lớp có khoảng cách trung bình nhỏ hơn.
+2. **Theo khoảng cách (distance):** mỗi láng giềng góp $1/(d+\varepsilon)$. Láng giềng gần có tiếng nói lớn hơn; hữu ích khi $k$ lớn và vài hàng xóm xa thuộc lớp khác.
 
 Ví dụ $k=4$, láng giềng là [Pug 0.8, Bombay 1.0, Pug 1.5, Bombay 1.1]:
 
-- Pug: 2 phiếu, khoảng cách trung bình 1.15
-- Bombay: 2 phiếu, khoảng cách trung bình 1.05
-- kết quả: **Bombay**
+- Vote đều: Pug 2, Bombay 2 → phá hòa bằng khoảng cách trung bình → **Bombay** (1.05 < 1.15)
+- Vote theo khoảng cách: Bombay được trọng số cao hơn từ láng giềng $d=1.0$ so với Pug $d=1.5$
 
-Với 5 lớp, hòa có thể xảy ra ngay cả khi $k$ lẻ (ví dụ $k=5$ chia 2–2–1), nên quy tắc phá hòa là cần thiết.
+Trên dữ liệu này, CV chọn vote theo khoảng cách ở cả 10 seed; accuracy CV cao hơn vote đều khoảng 1–2 điểm với cùng Manhattan.
 
 ## Ảnh hưởng của k
 
@@ -72,7 +88,7 @@ Với 5 lớp, hòa có thể xảy ra ngay cả khi $k$ lẻ (ví dụ $k=5$ ch
 | Vừa | Cân bằng giữa chi tiết và ổn định. |
 | Lớn | Biên trơn, nhưng láng giềng bắt đầu lấy mẫu từ lớp khác. Dễ **underfit**; khi $k$ tiến tới $N$, luôn dự đoán lớp đông nhất. |
 
-Trên dữ liệu này, $k=1$ luôn kém nhất (khoảng 50–56% accuracy CV). Với Manhattan, accuracy tăng tới khoảng $k=9$ rồi gần như phẳng tới $k=25$; với Euclidean, đạt đỉnh ở $k=13$ rồi giảm nhẹ. Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
+Trên dữ liệu này, $k=1$ luôn kém nhất (khoảng 58–60% accuracy CV với đặc trưng hiện tại). Với Manhattan + vote theo khoảng cách, accuracy tăng tới khoảng $k=15$ rồi gần như phẳng tới $k=25$. Chi tiết ở [05-danh-gia.md](05-danh-gia.md).
 
 ## Chọn k bằng cross-validation
 

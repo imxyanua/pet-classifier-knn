@@ -10,7 +10,7 @@ Các hướng dưới đây dựa trên điểm yếu **đã đo được** ở 
 | 2 | Bỏ Hu moments | **Đã làm** | Vector gọn hơn; accuracy không đổi trong ngưỡng dao động |
 | 3 | Làm giàu histogram HSV (16/16/16); thử H vòng tròn / Lab | **Đã làm phần lớn** | Accuracy 61.1% → **65.4% ± 2.1**; H vòng tròn và Lab không giữ |
 | 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | **Đã làm phần lớn** | IoU 0.655 → 0.716; accuracy lúc đó 59.3% → 61.1% |
-| 5 | Cải tiến k-NN: vote theo khoảng cách, khoảng cách chi-square cho histogram | Chưa | Nhỏ đến vừa |
+| 5 | Cải tiến k-NN: vote theo khoảng cách, khảo sát cosine / χ² | **Đã làm** | 65.4% → **66.6% ± 2.9**; CV luôn chọn Manhattan + vote khoảng cách |
 | 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Một phần | Dễ thử nghiệm, dễ viết báo cáo |
 
 Con số ở mục 1 và 2 là kết quả tại thời điểm làm, trước khi sửa phân đoạn ở mục 4.
@@ -100,18 +100,15 @@ Kết quả: IoU 0.716, 22.1% ảnh sai nặng; accuracy nhận dạng 59.3% →
 - Khoảng cách tới oracle cho thấy còn nhiều chỗ cải thiện, nhưng cần một phương pháp phân đoạn tăng được cả precision lẫn recall, ví dụ kết hợp nhiều tín hiệu (màu, cạnh, saliency) trong cùng một bài toán graph cut thay vì chỉ đổi cách khởi tạo GrabCut. Đây là việc lớn hơn nhiều so với các bước trước.
 - Phân đoạn bằng mạng neuron (U-Net, SAM) gần như chắc chắn thu hẹp khoảng cách này nhưng nằm ngoài phạm vi đề.
 
-## 5. Cải tiến k-NN
+## 5. Cải tiến k-NN — đã làm
 
-Các thay đổi nhỏ trong `knn/knn.py`, phù hợp với yêu cầu "khảo sát ảnh hưởng của khoảng cách":
+Các thay đổi trong `knn/knn.py` / `knn/validation.py`, phù hợp với yêu cầu "khảo sát ảnh hưởng của khoảng cách":
 
-- **Vote theo khoảng cách:** mỗi láng giềng góp phiếu $1/(d + \varepsilon)$ thay vì 1. Láng giềng gần có tiếng nói lớn hơn, giảm ảnh hưởng của láng giềng xa khi $k$ lớn.
-- **Khoảng cách chi-square** cho phần histogram:
-
-  $$\chi^2(h, h') = \frac{1}{2}\sum_i \frac{(h_i - h'_i)^2}{h_i + h'_i + \varepsilon}$$
-
-  Phù hợp với histogram hơn L1/L2 vì nó coi chênh lệch ở bin nhỏ là quan trọng hơn. Lưu ý chi-square tính trên histogram **chưa** chuẩn hóa z-score.
-- **Khoảng cách cosine:** chỉ quan tâm hướng của vector, bỏ qua độ lớn. Thêm vào bảng khảo sát để so sánh.
+- ~~**Vote theo khoảng cách**~~ — đã làm: $1/(d+\varepsilon)$; CV chọn ở 10/10 seed, +1–2 điểm CV so với vote đều.
+- ~~**Chi-square + cosine**~~ — đã thêm vào lưới CV; χ² hybrid (histogram thô + L1 phần còn lại), cosine chuẩn. **CV không chọn** cả hai (χ² kém rõ).
 - ~~**Khảo sát $k$ rộng hơn**~~ — đã làm cùng mục 1: dải $k$ hiện tới 25.
+
+**Kết quả:** 65.4% ± 2.1 → **66.6% ± 2.9**. Chi tiết ở [CHANGELOG.md](../CHANGELOG.md).
 
 ## 6. Cải tiến kỹ thuật
 
@@ -128,5 +125,6 @@ Nếu thời gian có hạn, thứ tự sau cho nhiều giá trị nhất cho b�
 1. ~~Mục 1 (cross-validation, nhiều seed)~~ — đã làm.
 2. ~~Mục 2 (bỏ Hu)~~ — đã làm; bảng ablation có trong [05-danh-gia.md](05-danh-gia.md), nên đưa vào báo cáo.
 3. ~~Mục 4a, 4b (đo IoU, cải thiện khởi tạo GrabCut)~~ — đã làm; bảng so sánh các cách khởi tạo nên đưa vào phần phân đoạn của báo cáo.
-4. Mục 3a và 3b (sửa kênh H) — cải tiến nhỏ, có cơ sở lý thuyết rõ.
-5. Mục 5 (vote theo khoảng cách, chi-square) — mở rộng phần khảo sát khoảng cách.
+4. ~~Mục 3 (histogram HSV mịn hơn)~~ — đã làm.
+5. ~~Mục 5 (vote theo khoảng cách, khảo sát cosine / χ²)~~ — đã làm.
+6. Còn lại nếu còn thời gian: tỷ lệ pixel không màu / histogram 2D H–S; hiện láng giềng bằng ảnh trong app; hoặc (ngoài đề) đặc trưng kết cấu cho Egyptian Mau.

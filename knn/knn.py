@@ -11,16 +11,45 @@ def manhattan_distances(X_train, x):
     return np.sum(np.abs(X_train - x), axis=1)
 
 
+def cosine_distances(X_train, x):
+    """1 - cosine similarity; vector gần như 0 được coi là khoảng cách 1."""
+    x_norm = np.linalg.norm(x)
+    train_norm = np.linalg.norm(X_train, axis=1)
+    denom = train_norm * x_norm
+    sims = np.zeros(len(X_train), dtype=np.float64)
+    ok = denom > 1e-12
+    if ok.any():
+        sims[ok] = (X_train[ok] @ x) / denom[ok]
+    return 1.0 - sims
+
+
+def chi_square_distances(X_train, x):
+    """χ² trên các bin không âm (histogram); ε tránh chia 0."""
+    diff = X_train - x
+    denom = X_train + x + 1e-8
+    return 0.5 * np.sum((diff ** 2) / denom, axis=1)
+
+
 DISTANCES = {
     "euclidean": euclidean_distances,
     "manhattan": manhattan_distances,
+    "cosine": cosine_distances,
+    "chi_square": chi_square_distances,
 }
 
+VOTES = ("uniform", "distance")
 
-def standardize_fit(X):
+
+def standardize_fit(X, skip_mask=None):
     mean = X.mean(axis=0)
     std = X.std(axis=0)
     std = np.where(std < 1e-8, 1.0, std)
+    if skip_mask is not None and np.any(skip_mask):
+        mean = np.array(mean, dtype=np.float64, copy=True)
+        std = np.array(std, dtype=np.float64, copy=True)
+        # Giữ nguyên cột histogram: (x - 0) / 1 = x
+        mean[skip_mask] = 0.0
+        std[skip_mask] = 1.0
     return mean, std
 
 
@@ -56,25 +85,65 @@ def _majority_vote(neighbor_labels, neighbor_dists):
     return best_label
 
 
-def knn_predict_one(x, X_train, y_train, k=5, metric="euclidean"):
+def _distance_vote(neighbor_labels, neighbor_dists, eps=1e-8):
+    """Mỗi láng giềng góp 1/(d+ε); hòa thì chọn lớp có khoảng cách trung bình nhỏ hơn."""
+    weights = 1.0 / (neighbor_dists + eps)
+    best_label = neighbor_labels[0]
+    best_weight = -1.0
+    best_dist = np.inf
+    for lab in np.unique(neighbor_labels):
+        mask = neighbor_labels == lab
+        weight = float(np.sum(weights[mask]))
+        mean_d = float(np.mean(neighbor_dists[mask]))
+        if weight > best_weight or (weight == best_weight and mean_d < best_dist):
+            best_label = lab
+            best_weight = weight
+            best_dist = mean_d
+    return best_label
+
+
+def pairwise_distances(X_train, x, metric="euclidean", hist_mask=None):
+    """Khoảng cách từ x tới mọi hàng X_train. chi_square = χ²(hist) + L1(phần còn lại)."""
+    if metric == "chi_square":
+        if hist_mask is not None and np.any(hist_mask):
+            dists = chi_square_distances(X_train[:, hist_mask], x[hist_mask])
+            rest = ~hist_mask
+            if np.any(rest):
+                dists = dists + manhattan_distances(X_train[:, rest], x[rest])
+            return dists
+        return manhattan_distances(X_train, x)
+    if metric not in DISTANCES:
+        raise ValueError(f"Khoảng cách không hỗ trợ: {metric}")
+    return DISTANCES[metric](X_train, x)
+
+
+def knn_predict_one(x, X_train, y_train, k=5, metric="euclidean", vote="uniform", hist_mask=None):
     if k < 1:
         raise ValueError("k phải >= 1")
+    if vote not in VOTES:
+        raise ValueError(f"Cách vote không hỗ trợ: {vote}")
     if metric not in DISTANCES:
         raise ValueError(f"Khoảng cách không hỗ trợ: {metric}")
     k = min(k, len(X_train))
-    dists = DISTANCES[metric](X_train, x)
+    dists = pairwise_distances(X_train, x, metric=metric, hist_mask=hist_mask)
     nn = np.argpartition(dists, k - 1)[:k]
     order = np.argsort(dists[nn])
     nn = nn[order]
     labels = y_train[nn]
-    pred = _majority_vote(labels, dists[nn])
-    return pred, dists[nn], labels
+    neighbor_dists = dists[nn]
+    if vote == "distance":
+        pred = _distance_vote(labels, neighbor_dists)
+    else:
+        pred = _majority_vote(labels, neighbor_dists)
+    return pred, neighbor_dists, labels
 
 
-def knn_predict_batch(X, X_train, y_train, k=5, metric="euclidean"):
+def knn_predict_batch(X, X_train, y_train, k=5, metric="euclidean", vote="uniform", hist_mask=None):
     preds = []
     for x in X:
-        pred, _, _ = knn_predict_one(x, X_train, y_train, k=k, metric=metric)
+        pred, _, _ = knn_predict_one(
+            x, X_train, y_train, k=k, metric=metric, vote=vote, hist_mask=hist_mask
+        )
         preds.append(pred)
     return np.array(preds)
 
