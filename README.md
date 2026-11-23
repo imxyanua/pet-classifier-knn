@@ -14,7 +14,7 @@ Mỗi ảnh đi qua pipeline sau:
 
     ảnh gốc -> resize (cạnh dài 192px) -> Gaussian blur 5×5 ↩
             -> GrabCut (khởi tạo bằng mask viền/tâm, 5 vòng) + morphology + giữ vùng lớn nhất -> mask đối tượng ↩
-            -> đặc trưng màu (HSV) + đặc trưng hình học (contour) -> vector 59 chiều ↩
+            -> đặc trưng màu (HSV) + đặc trưng hình học (contour) -> vector 60 chiều ↩
             -> chuẩn hóa z-score -> k-NN (Manhattan + vote theo khoảng cách, …) -> nhãn giống
 
 ## Tổng quan
@@ -43,8 +43,8 @@ Tập test không được dùng để chọn $k$, nên con số báo cáo là �
 
 | | Accuracy trên test |
 |---|---:|
-| Trung bình 10 seed | **66.6% ± 2.9%** (thấp nhất 62.0%, cao nhất 72.0%) |
-| `seed=42` (CV chọn Manhattan, vote theo khoảng cách, $k=15$) | 66.0% |
+| Trung bình 10 seed | **67.1% ± 1.7%** (thấp nhất 65.0%, cao nhất 71.0%) |
+| `seed=42` (CV chọn Manhattan, vote theo khoảng cách, $k=19$) | 68.0% |
 
 Đoán ngẫu nhiên với 5 lớp chỉ đạt 20%.
 
@@ -66,9 +66,9 @@ Cùng quy trình trên, 10 seed:
 
 | Đặc trưng | Số chiều | Accuracy |
 |---|---:|---:|
-| Màu + hình học + Hu | 66 | 66.6% ± 2.4 |
-| **Màu + hình học (mặc định)** | 59 | **66.6% ± 2.9** |
-| Chỉ màu | 54 | 63.7% ± 2.5 |
+| Màu + hình học + Hu | 67 | 66.6% ± 2.4 |
+| **Màu + hình học (mặc định)** | 60 | **67.1% ± 1.7** |
+| Chỉ màu | 55 | 63.7% ± 2.5 |
 | Chỉ hình học | 5 | 31.1% ± 3.5 |
 | Chỉ Hu moments | 7 | 29.3% ± 0.8 |
 
@@ -84,7 +84,7 @@ Trimap của bộ Oxford (mask do người gán nhãn) được dùng **chỉ đ
 | Hình chữ nhật cách mép 8%, 1 vòng (cũ) | 0.655 | 27.4% | 59.3% ± 3.6 |
 | **Mask viền/tâm, 5 vòng (hiện tại)** | **0.716** | **22.1%** | 61.1% ± 2.8 (trước khi tinh chỉnh histogram) |
 
-Với cùng mask đó, histogram HSV 16/16/16 rồi vote theo khoảng cách đưa accuracy lên **66.6% ± 2.9** — xem [CHANGELOG.md](CHANGELOG.md).
+Với cùng mask đó, histogram HSV 16/16/16, vote theo khoảng cách và H chỉ trên pixel có màu đưa accuracy lên **67.1% ± 1.7** — xem [CHANGELOG.md](CHANGELOG.md).
 
 Cách cũ coi toàn bộ 8% sát mép là nền chắc chắn, nên mọi phần con vật chạm mép ảnh (rất phổ biến với ảnh thú cưng) đều bị cắt mất; khi con vật chiếm gần hết khung hình, mask thường rỗng. Cách mới chỉ coi 1% ngoài cùng là nền chắc chắn, dải 5% tiếp theo là "có thể là nền", và một elip nhỏ ở tâm ảnh là "chắc chắn là con vật".
 
@@ -108,13 +108,14 @@ Năm giống này được chọn vì khác nhau rõ về màu và dáng, phù h
 
 ## Đặc trưng ảnh
 
-Mỗi ảnh được trích 66 chiều, chỉ tính trên các pixel thuộc mask đối tượng. Mặc định dùng 59 chiều đầu (màu + hình học).
+Mỗi ảnh được trích 67 chiều, chỉ tính trên các pixel thuộc mask đối tượng. Mặc định dùng 60 chiều đầu (màu + hình học).
 
-**Màu (54 chiều), không gian HSV**
+**Màu (55 chiều), không gian HSV**
 
-- trung bình H, S, V (3)
-- độ lệch chuẩn H, S, V (3)
-- histogram H 16 bin, S 16 bin, V 16 bin, đã chuẩn hóa về tổng bằng 1 (48)
+- trung bình H, S, V (3) — $\mu_H$ chỉ trên pixel có màu ($S,V \ge 40$)
+- độ lệch chuẩn H, S, V (3) — $\sigma_H$ tương tự
+- tỷ lệ pixel không màu (1)
+- histogram H 16 bin (chỉ pixel có màu), S 16 bin, V 16 bin, chuẩn hóa tổng 1 (48)
 
 **Hình học (5 chiều), từ contour lớn nhất**
 

@@ -65,11 +65,11 @@ data/<giống>/*.jpg
 (ảnh 192px, mask nhị phân)
    │  extract_features    màu HSV trong mask + hình dạng contour
    ▼
-vector 66 chiều
+vector 67 chiều
    │  load_or_extract     lặp 1.000 ảnh, lưu features_cache.npz
    ▼
-X (1000×66), y (1000)
-   │  select_feature_groups   giữ màu + hình học → 1000×59
+X (1000×67), y (1000)
+   │  select_feature_groups   giữ màu + hình học → 1000×60
    │  stratified_split        800 train / 200 test, giữ tỷ lệ lớp
    ▼
 tập train (800)                         tập test (200)

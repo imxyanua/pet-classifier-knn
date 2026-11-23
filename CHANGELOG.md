@@ -13,10 +13,26 @@ Trừ khi ghi khác, accuracy là accuracy trên tập test, trung bình ± đ�
 | PR #2 (22/11) | 61.1% ± 2.8 | **0.716** | Đổi cách khởi tạo GrabCut |
 | PR #3, #5 (23/11) | 61.1% ± 2.8 | 0.716 | Chỉ thêm công cụ đo và ghi lại thử nghiệm |
 | PR #7 (23/11) | 65.4% ± 2.1 | 0.716 | Histogram HSV mịn hơn (16/16/16) |
-| PR #8 (23/11) | **66.6% ± 2.9** | 0.716 | Vote theo khoảng cách; khảo sát cosine / χ² |
+| PR #8 (23/11) | 66.6% ± 2.9 | 0.716 | Vote theo khoảng cách; khảo sát cosine / χ² |
+| PR #9 (23/11) | **67.1% ± 1.7** | 0.716 | H chỉ trên pixel có màu + tỷ lệ không màu |
 | Oracle (tham khảo) | 72.5% ± 2.0 | 1.0 | Đặc trưng tính trên trimap, tức phân đoạn hoàn hảo; không thuộc pipeline |
 
 ## [Chưa phát hành]
+
+## 2026-11-23 — H trên pixel có màu
+
+PR [#9](https://github.com/imxyanua/pet-classifier-knn/pull/9).
+
+Pixel đen/xám/trắng có H gần như nhiễu. Pipeline mới:
+
+- Chỉ tính $\mu_H$, $\sigma_H$ và histogram H trên pixel có $S \ge 40$ và $V \ge 40$.
+- Thêm đặc trưng **tỷ lệ pixel không màu** (phân biệt Bombay/Samoyed/Mau với Pug/Sphynx).
+- S, V và histogram S/V vẫn trên mọi pixel trong mask.
+- `CACHE_VERSION` 3 → 4; màu 54 → 55 chiều (mặc định 59 → 60).
+
+**Kết quả:** 66.6% ± 2.9 → **67.1% ± 1.7** (thấp nhất 65.0%, cao nhất 71.0%). Mức tăng trung bình nhỏ (trong ngưỡng dao động) nhưng độ lệch chuẩn giảm; CV vẫn chọn Manhattan + vote theo khoảng cách ở 10/10 seed. `seed=42`: test 68.0%.
+
+**Chưa làm trong PR này:** histogram 2D H–S (cẩn thận số chiều).
 
 ## 2026-11-23 — Cải tiến k-NN (vote và khoảng cách)
 
