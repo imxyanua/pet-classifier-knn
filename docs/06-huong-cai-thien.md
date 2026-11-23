@@ -97,11 +97,17 @@ Kết quả với cách khởi tạo cũ: IoU 0.655, 27.4% số ảnh sai nặng
 
 Kết quả: IoU 0.716, 22.1% ảnh sai nặng; accuracy nhận dạng 59.3% → 61.1%, accuracy cross-validation tăng ở cả 10/10 seed.
 
-### 4c. Còn lại
+### 4c. Oracle và các thử nghiệm tiếp theo — đã làm, không giữ thay đổi nào
 
-- **Thí nghiệm "oracle":** trích đặc trưng bằng trimap thay vì GrabCut rồi chạy lại k-NN, để biết **trần** accuracy nếu phân đoạn hoàn hảo. Đây chỉ là phân tích phụ (dùng mask người vẽ thay cho bước phân đoạn của đề), nhưng cho biết còn bao nhiêu lỗi nằm ở phân đoạn so với ở đặc trưng.
-- **Nền đồng nhất:** 149 ảnh tệ đi khi đổi cách khởi tạo, chủ yếu ảnh có nền một màu (tuyết, phông tối) khiến mask tràn ra cả ảnh. Có thể kết hợp hai cách khởi tạo và chọn mask "hợp lý" hơn theo một tiêu chí không cần trimap (ví dụ diện tích mask nằm trong khoảng 10–80% ảnh).
+- **Oracle:** tính đặc trưng trên trimap cho accuracy 71.8% (CV) / 72.5% (test), cao hơn GrabCut hiện tại 9–11 điểm. Phân đoạn vẫn là nguồn lỗi lớn nhất.
+- **Đã thử:** độ phân giải 256/320px, GrabCut hai lượt, giữ nhiều vùng, kênh kết cấu, giữ vùng chứa tâm, phép mở lớn hơn, khởi tạo bằng saliency, tính màu trên lõi mask, tự chọn mask giữa nhiều cách theo khác biệt màu.
+- **Kết quả:** IoU tăng tới 0.739 (một cách) hoặc 0.755 (chọn giữa nhiều cách), nhưng không biến thể nào tăng accuracy nhận dạng vượt mức dao động. Các cách tăng recall đều làm giảm precision và ngược lại. Chi tiết ở [02-tien-xu-ly-va-phan-doan.md](02-tien-xu-ly-va-phan-doan.md).
+
+### 4d. Còn lại
+
 - **Giới hạn của GrabCut:** khi con vật cùng màu với nền (thân Pug màu kem trên tường trắng), không cách khởi tạo nào sửa được, vì GrabCut chỉ dựa vào màu.
+- Khoảng cách tới oracle cho thấy còn nhiều chỗ cải thiện, nhưng cần một phương pháp phân đoạn tăng được cả precision lẫn recall, ví dụ kết hợp nhiều tín hiệu (màu, cạnh, saliency) trong cùng một bài toán graph cut thay vì chỉ đổi cách khởi tạo GrabCut. Đây là việc lớn hơn nhiều so với các bước trước.
+- Phân đoạn bằng mạng neuron (U-Net, SAM) gần như chắc chắn thu hẹp khoảng cách này nhưng nằm ngoài phạm vi đề.
 
 ## 5. Cải tiến k-NN
 

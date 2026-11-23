@@ -126,6 +126,53 @@ Sphynx khó nhất, chủ yếu do precision thấp: da hồng/xám dễ lẫn v
 
 Accuracy cross-validation tính trên 800 ảnh nên ổn định hơn accuracy trên 200 ảnh test, và nó tăng ở mọi seed, nên cải thiện là thật dù mức tăng trên test (1.8 điểm) nằm trong độ dao động.
 
+### Phân đoạn hoàn hảo thì nhận dạng được bao nhiêu (oracle)
+
+Để biết phân đoạn còn là nút thắt hay không, đặc trưng được tính thử trên **trimap** thay cho mask GrabCut, tức giả sử phân đoạn hoàn hảo. Đây chỉ là phép đo phân tích, không thuộc pipeline.
+
+| Mask dùng để tính đặc trưng | Accuracy CV (10 seed) | Accuracy test (10 seed) |
+|---|---:|---:|
+| GrabCut hiện tại | 62.9% | 61.1% ± 2.8 |
+| Trimap (phân đoạn hoàn hảo) | **71.8%** | **72.5% ± 2.0** |
+
+Khoảng cách khoảng 9–11 điểm: **phân đoạn vẫn là nguồn lỗi lớn nhất**, lớn hơn nhiều so với những gì còn có thể cải thiện ở bước chọn $k$ hay khoảng cách.
+
+### Các thử nghiệm tiếp theo — không giữ
+
+Dựa trên kết quả oracle, nhiều cách cải thiện GrabCut đã được thử, chỉnh trên 800 ảnh train (`seed=42`) và kiểm chứng bằng accuracy cross-validation trên 10 seed. Tiêu chí giữ: IoU tăng **và** accuracy CV tăng nhất quán qua các seed.
+
+**Lấy được toàn bộ thân** (khi mask chỉ có mặt):
+
+| Biến thể | IoU | Thiếu thân | Dính nền | Accuracy CV |
+|---|---:|---:|---:|---:|
+| Hiện tại (192px, 1 lượt) | 0.721 | 75 | 67 | **62.9%** |
+| Giữ thêm các vùng phụ đủ lớn | 0.721 | 74 | 67 | — |
+| Chạy GrabCut hai lượt (lượt 2 dựng quanh mask lượt 1) | 0.725 | 72 | 68 | 62.1% |
+| Thay một kênh màu bằng bản đồ kết cấu | 0.674–0.680 | 96–108 | 79–84 | — |
+| Xử lý ở 256px | 0.732 | 45 | 83 | 61.2% |
+| 256px + hai lượt | 0.739 | 39 | 83 | 61.4% |
+
+**Bớt dính nền:**
+
+| Biến thể | IoU | Precision | Dính nền | Accuracy CV |
+|---|---:|---:|---:|---:|
+| Giữ vùng chứa tâm ảnh, phép mở kernel 9–13px | ≈ 0.72 | ≈ 0.85 | 65–67 | — |
+| Saliency (spectral residual): bỏ 30% vùng ít nổi bật nhất | 0.681 | 0.864 | 47 | 62.6% |
+| Saliency: bỏ 50% vùng ít nổi bật nhất | 0.664 | 0.890 | 31 | 62.4% |
+| Chỉ tính màu trên lõi mask (co 13px) | 0.721 | — | — | 63.0% |
+| Chọn mask có màu trong/ngoài khác nhau nhất trong 3 cách | ≈ 0.75 | — | — | 63.1% |
+
+Giới hạn trên của cách "chọn mask tốt nhất cho từng ảnh" (biết trimap) là IoU 0.804; tiêu chí khác biệt màu đạt 0.755, tiêu chí độ mạnh cạnh dọc viền chỉ đạt 0.710.
+
+Kết luận:
+
+- **Lấy thêm thân thường kéo theo dính nền.** Độ phân giải cao hơn và GrabCut hai lượt tăng recall rõ rệt (số ảnh thiếu thân 75 → 39) nhưng tăng cả số ảnh dính nền (67 → 83), và **accuracy nhận dạng giảm** ở cả 10/10 seed. Với đặc trưng màu, vài phần trăm pixel nền lẫn vào làm hỏng histogram nhiều hơn so với thiếu một phần thân.
+- **Bớt dính nền thì lại mất thân.** Saliency cắt nền mạnh (dính nền 67 → 31) nhưng thiếu thân tăng gấp 2–2.5 lần.
+- **Không biến thể nào tăng accuracy vượt mức dao động** (±0.5 điểm CV). Tốt nhất là chọn mask theo khác biệt màu (63.1%, tăng ở 7/10 seed) nhưng chậm gấp 3 lần, nên không được đưa vào pipeline.
+- Muốn tiến gần mức oracle cần **tăng cả precision lẫn recall cùng lúc**, điều mà các biến thể khởi tạo GrabCut chỉ dựa vào màu chưa làm được.
+
+Đoạn code thử nghiệm các biến thể này không nằm trong repo; các con số được tạo bằng `features/segmentation_eval.py` (IoU) và quy trình của `knn/evaluate.py` (accuracy).
+
 ## Kết quả và giới hạn
 
 ![Phân đoạn](segmentation.png)

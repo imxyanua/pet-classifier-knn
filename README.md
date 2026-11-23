@@ -278,6 +278,7 @@ Nếu chưa có cache, hãy chạy tab Đánh giá (hoặc `python evaluate.py`)
 
 ## Hạn chế
 
+- **Phân đoạn là nguồn lỗi lớn nhất.** Nếu tính đặc trưng trên trimap (phân đoạn hoàn hảo), accuracy lên 72.5%, cao hơn hiện tại khoảng 11 điểm. Nhiều cách cải thiện GrabCut đã được thử (độ phân giải cao hơn, chạy hai lượt, saliency, tự chọn mask) và tăng được IoU, nhưng không cách nào tăng accuracy vượt mức dao động, vì lấy thêm thân thường kéo theo dính nền. Chi tiết ở [docs/02](docs/02-tien-xu-ly-va-phan-doan.md).
 - **Phân đoạn vẫn sai nặng ở khoảng 22% số ảnh.** GrabCut chỉ dựa vào màu, nên thất bại khi con vật cùng màu với nền: Pug ở hình đầu trang vẫn chỉ lấy được phần mặt vì thân màu kem gần với bức tường; với nền đồng nhất hoặc ảnh có khung viền, mask có thể tràn ra gần hết ảnh. Sphynx khó nhất (IoU 0.648) vì da hồng/xám dễ lẫn với chăn, thảm.
 - **Hình dạng phụ thuộc tư thế.** Con vật nằm, ngồi hay đứng cho contour rất khác nhau, nên hình học một mình chỉ đạt khoảng 31% và Hu moments không dùng được.
 - **Tập test nhỏ.** Với 200 ảnh test, kết quả dao động khoảng ±3 điểm giữa các cách chia. Các chênh lệch nhỏ hơn mức này không đủ để kết luận cách nào tốt hơn.
