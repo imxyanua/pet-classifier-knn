@@ -286,6 +286,8 @@ Nếu chưa có cache, hãy chạy tab Đánh giá (hoặc `python evaluate.py`)
 
 ## Tài liệu chi tiết
 
+Quá trình làm và kết quả qua từng phiên bản được ghi trong [`CHANGELOG.md`](CHANGELOG.md).
+
 Thư mục [`docs/`](docs/README.md) giải thích từng bước, cách đọc kết quả, các thí nghiệm bổ sung và hướng cải thiện:
 
 1. [Tổng quan](docs/01-tong-quan.md): bài toán, dữ liệu, cấu trúc code, luồng dữ liệu
