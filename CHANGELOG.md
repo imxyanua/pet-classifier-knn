@@ -12,10 +12,28 @@ Trừ khi ghi khác, accuracy là accuracy trên tập test, trung bình ± đ�
 | PR #1 (18/11) | 59.3% ± 3.6 | 0.655 | Cách đánh giá đúng đầu tiên |
 | PR #2 (22/11) | 61.1% ± 2.8 | **0.716** | Đổi cách khởi tạo GrabCut |
 | PR #3, #5 (23/11) | 61.1% ± 2.8 | 0.716 | Chỉ thêm công cụ đo và ghi lại thử nghiệm |
-| PR #7 (23/11) | **65.4% ± 2.1** | 0.716 | Histogram HSV mịn hơn (16/16/16) |
+| PR #7 (23/11) | 65.4% ± 2.1 | 0.716 | Histogram HSV mịn hơn (16/16/16) |
+| PR #8 (23/11) | **66.6% ± 2.9** | 0.716 | Vote theo khoảng cách; khảo sát cosine / χ² |
 | Oracle (tham khảo) | 72.5% ± 2.0 | 1.0 | Đặc trưng tính trên trimap, tức phân đoạn hoàn hảo; không thuộc pipeline |
 
 ## [Chưa phát hành]
+
+## 2026-11-23 — Cải tiến k-NN (vote và khoảng cách)
+
+PR [#8](https://github.com/imxyanua/pet-classifier-knn/pull/8).
+
+**Thay đổi giữ lại**
+- Vote theo khoảng cách: mỗi láng giềng góp $1/(d+\varepsilon)$ thay vì 1 phiếu; hòa vẫn phá bằng khoảng cách trung bình nhỏ hơn.
+- Cross-validation chọn đồng thời `(metric, vote, k)`.
+- Thêm cosine và χ² (hybrid: χ² trên histogram thô + L1 trên phần còn lại đã z-score) vào bảng khảo sát; app cho chọn metric/vote.
+
+**Kết quả:** accuracy 65.4% ± 2.1 → **66.6% ± 2.9** (thấp nhất 62.0%, cao nhất 72.0%). CV chọn **Manhattan + vote theo khoảng cách** ở cả 10/10 seed. `seed=42`: CV 66.75% ($k=15$), test 66.0%. Với cùng $k$, vote theo khoảng cách cao hơn vote đều khoảng 1–2 điểm CV.
+
+**Đã thử, CV không chọn**
+- Cosine: gần Euclidean, dưới Manhattan.
+- χ² trên histogram: kém rõ (CV đỉnh ~63%), dù đã giữ bin thô không z-score.
+
+**Kết luận:** với đặc trưng hiện tại, cách gộp phiếu quan trọng hơn thêm metric mới. Manhattan + vote theo khoảng cách là cấu hình mặc định hợp lý; χ² không thay được L1 trên vector hỗn hợp thống kê + histogram + hình học.
 
 ## 2026-11-23 — Histogram HSV mịn hơn
 

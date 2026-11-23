@@ -29,4 +29,10 @@ K_CHOICES = [1, 3, 5, 7, 9, 11, 13, 15, 19, 25]
 
 # Hu moments vẫn được trích và cache, nhưng mặc định không dùng: riêng chúng gần mức đoán bừa.
 DEFAULT_FEATURE_GROUPS = ["color", "geometry"]
-METRIC_LABELS = {"Euclidean": "euclidean", "Manhattan": "manhattan"}
+METRIC_LABELS = {
+    "Euclidean": "euclidean",
+    "Manhattan": "manhattan",
+    "Cosine": "cosine",
+    "Chi-square": "chi_square",
+}
+VOTE_LABELS = {"Đều": "uniform", "Theo khoảng cách": "distance"}

@@ -40,13 +40,13 @@ Accuracy chung có thể che mất một lớp yếu; các thước đo theo l�
 
 | | Accuracy trên test |
 |---|---:|
-| Trung bình 10 seed | **65.4% ± 2.1%** |
-| Thấp nhất / cao nhất | 63.5% / 70.0% |
-| `seed=42` | 63.5% |
+| Trung bình 10 seed | **66.6% ± 2.9%** |
+| Thấp nhất / cao nhất | 62.0% / 72.0% |
+| `seed=42` | 66.0% |
 
-CV chọn **Manhattan ở cả 10 seed**. Giá trị $k$ được chọn: 19 (5 lần), 25 (2), 13 (2), 11 (1 lần).
+CV chọn **Manhattan + vote theo khoảng cách ở cả 10 seed**. Giá trị $k$ được chọn: 19 (5 lần), 25 (3), 15 (1), 13 (1 lần). Cosine và χ² có trong lưới tìm kiếm nhưng không bao giờ thắng.
 
-Khoảng dao động 63.5%–70.0% vẫn đáng kể. Nguyên nhân chính là tập test nhỏ: với 200 ảnh, mỗi ảnh đúng/sai thay đổi accuracy 0.5 điểm, và việc ảnh "khó" (phân đoạn lỗi) rơi vào test nhiều hay ít phụ thuộc may rủi. Vì vậy **chênh lệch dưới khoảng 3–4 điểm giữa hai phương án không đủ để kết luận phương án nào tốt hơn**.
+Khoảng dao động 62.0%–72.0% vẫn đáng kể. Nguyên nhân chính là tập test nhỏ: với 200 ảnh, mỗi ảnh đúng/sai thay đổi accuracy 0.5 điểm, và việc ảnh "khó" (phân đoạn lỗi) rơi vào test nhiều hay ít phụ thuộc may rủi. Vì vậy **chênh lệch dưới khoảng 3–4 điểm giữa hai phương án không đủ để kết luận phương án nào tốt hơn**; bằng chứng mạnh hơn là CV tăng nhất quán (vote theo khoảng cách thắng vote đều trên lưới $k$).
 
 ### Ảnh hưởng của k và khoảng cách
 
@@ -54,28 +54,33 @@ Khoảng dao động 63.5%–70.0% vẫn đáng kể. Nguyên nhân chính là t
 
 Accuracy cross-validation trên 800 ảnh train với `seed=42`:
 
+Bảng dưới là **vote theo khoảng cách** (`seed=42`), vì CV luôn chọn kiểu vote này:
+
 | $k$ | 1 | 3 | 5 | 7 | 9 | 11 | 13 | 15 | 19 | 25 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Euclidean | 58.5 | 60.9 | 60.4 | 61.8 | 62.8 | 61.8 | 61.4 | 62.4 | 61.6 | 63.1 |
-| Manhattan | 59.9 | 62.0 | 63.4 | 64.9 | 64.3 | 65.0 | 64.5 | **65.1** | 64.5 | 63.8 |
+| Euclidean | 58.5 | 61.1 | 61.5 | 63.0 | 63.9 | 63.4 | 63.3 | 64.1 | 63.5 | 64.6 |
+| Manhattan | 59.9 | 62.8 | 64.6 | 65.9 | 66.0 | 66.6 | 66.4 | **66.8** | 66.4 | 65.8 |
+| Cosine | 57.8 | 62.1 | 62.6 | 63.5 | 65.0 | 63.6 | 63.3 | 64.4 | 63.8 | 63.6 |
+| Chi-square | 53.6 | 55.1 | 58.4 | 61.0 | 59.9 | 61.0 | 60.4 | 60.6 | 63.0 | 61.9 |
 
-- **Manhattan tốt hơn Euclidean ở mọi giá trị $k$**. L2 bình phương độ lệch nên một chiều lệch lớn chi phối cả khoảng cách; L1 cộng tuyến tính nên các chiều đóng góp đều hơn. Với vector trộn màu và hình học, nơi một vài chiều có thể nhiễu do phân đoạn lỗi, L1 bền hơn.
-- **$k$ nhỏ kém rõ rệt.** $k=1$ thấp hơn đỉnh khoảng 5 điểm: một láng giềng duy nhất quá nhạy với ảnh bị phân đoạn sai hoặc ảnh lạ.
-- **Với Manhattan, đường gần như phẳng từ $k=7$ đến $k=19$** (dao động trong khoảng 1 điểm). Đó là lý do CV chọn $k$ khác nhau giữa các seed: các giá trị này gần như tương đương, và sai số ngẫu nhiên quyết định cái nào nhỉnh hơn.
+- **Manhattan tốt nhất**; cosine gần Euclidean; χ² kém rõ dù đã giữ histogram thô.
+- **Vote theo khoảng cách** nâng Manhattan khoảng 1–2 điểm CV so với vote đều (đỉnh 66.8% so với 65.1%).
+- **$k$ nhỏ kém rõ rệt.** $k=1$ thấp hơn đỉnh khoảng 7 điểm.
+- **Với Manhattan, đường gần như phẳng từ $k=11$ đến $k=19$**. CV chọn $k$ khác nhau giữa các seed vì các giá trị gần tương đương.
 
 ## Đọc ma trận nhầm lẫn
 
 ![Ma trận nhầm lẫn](confusion_matrix.png)
 
-`seed=42`, Manhattan, $k=15$, accuracy 63.5%:
+`seed=42`, Manhattan, vote theo khoảng cách, $k=15$, accuracy 66.0%:
 
 | Giống | Đúng / 40 | Precision | Recall | F1 | Hay bị nhầm thành |
 |---|---:|---:|---:|---:|---|
-| Bombay | 30 | 75.0% | 75.0% | **75.0%** | Pug (7), Sphynx (2) |
-| Sphynx | 23 | 82.1% | 57.5% | 67.6% | Samoyed (7), Egyptian Mau (6) |
-| Samoyed | 28 | 57.1% | 70.0% | 62.9% | Pug (9), Egyptian Mau (3) |
-| Pug | 27 | 50.0% | 67.5% | 57.4% | Samoyed (8), Bombay (4) |
-| Egyptian Mau | 19 | 65.5% | 47.5% | 55.1% | Pug (7), Samoyed (6), Bombay (6) |
+| Bombay | 31 | 75.6% | 77.5% | **76.5%** | Pug (7), Sphynx (1) |
+| Sphynx | 23 | 88.5% | 57.5% | 69.7% | Samoyed (7), Egyptian Mau (6) |
+| Samoyed | 29 | 58.0% | 72.5% | 64.4% | Pug (8), Egyptian Mau (3) |
+| Pug | 27 | 52.9% | 67.5% | 59.3% | Samoyed (8), Bombay (4) |
+| Egyptian Mau | 22 | 68.8% | 55.0% | 61.1% | Pug (5), Samoyed (6), Bombay (6) |
 
 Giải thích:
 
@@ -97,7 +102,7 @@ python evaluate.py --features color
 | Đặc trưng | Số chiều | Accuracy test (10 seed) |
 |---|---:|---:|
 | Màu + hình học + Hu | 66 | 66.6% ± 2.4 |
-| **Màu + hình học (mặc định)** | 59 | **65.4% ± 2.1** |
+| **Màu + hình học (mặc định)** | 59 | **66.6% ± 2.9** |
 | Chỉ màu | 54 | 63.7% ± 2.5 |
 | Hình học + Hu | 12 | 32.4% ± 2.4 |
 | Chỉ hình học | 5 | 31.1% ± 3.5 |
@@ -116,7 +121,8 @@ Kết luận:
 | 1 | Chọn $k \le 11$ trực tiếp trên tập test, một seed | 58.0% (lạc quan) |
 | 2 | Chọn $k \le 25$ bằng cross-validation trên train, 10 seed, bỏ Hu | 59.3% ± 3.6 |
 | 3 | Khởi tạo GrabCut bằng mask viền/tâm, 5 vòng | 61.1% ± 2.8 |
-| 4 | Histogram HSV 16/16/16 (thay 8/4/4) | **65.4% ± 2.1** |
+| 4 | Histogram HSV 16/16/16 (thay 8/4/4) | 65.4% ± 2.1 |
+| 5 | Vote theo khoảng cách; khảo sát cosine / χ² | **66.6% ± 2.9** |
 
 Con số của phiên bản 1 không so sánh trực tiếp được với hai phiên bản sau, vì nó dùng tập test để chọn $k$.
 
