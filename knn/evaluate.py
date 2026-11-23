@@ -1,11 +1,20 @@
 # code by xyanua - github.com/imxyanua
 """Đánh giá k-NN: chọn (khoảng cách, vote, k) bằng cross-validation trên train, báo cáo trên test."""
 import argparse
+import json
 from collections import Counter
+from pathlib import Path
 
 import numpy as np
 
-from config import DEFAULT_FEATURE_GROUPS, DISPLAY_NAMES, K_CHOICES, SELECTED_BREEDS
+from config import (
+    DEFAULT_FEATURE_GROUPS,
+    DISPLAY_NAMES,
+    DOCS_DIR,
+    EVAL_JSON_PATH,
+    K_CHOICES,
+    SELECTED_BREEDS,
+)
 from dataset import load_or_extract
 from features import FEATURE_GROUPS, histogram_mask, select_feature_groups
 from knn import (
@@ -36,6 +45,11 @@ def parse_args(argv=None):
         "--features",
         default=",".join(DEFAULT_FEATURE_GROUPS),
         help=f"nhóm đặc trưng, phân tách bằng dấu phẩy: {', '.join(FEATURE_GROUPS)}",
+    )
+    parser.add_argument(
+        "--export-dir",
+        default=DOCS_DIR,
+        help="thư mục ghi JSON + accuracy_k.png + confusion_matrix.png (chuỗi rỗng để bỏ)",
     )
     return parser.parse_args(argv)
 
@@ -82,7 +96,6 @@ def print_detailed(result, seed, n_folds):
     print(f"\n=== Chi tiết với seed={seed} ===")
     print(f"Train {result['n_train']} · Test {result['n_test']}")
     print(f"\nAccuracy cross-validation {n_folds} fold trên tập train:")
-    # In từng kiểu vote một bảng để dễ đọc
     for vote in VOTES:
         print(f"\nvote={vote}")
         print(f"{'k':>4}  " + "  ".join(f"{m:>10}" for m in METRICS))
@@ -111,26 +124,51 @@ def print_detailed(result, seed, n_folds):
             f"{DISPLAY_NAMES[cls]:<16}{precision[i] * 100:9.1f}%"
             f"{recall[i] * 100:9.1f}%{f1[i] * 100:9.1f}%"
         )
-    print(f"{'trung bình':<16}{precision.mean() * 100:9.1f}%{recall.mean() * 100:9.1f}%{f1.mean() * 100:9.1f}%")
+    print(
+        f"{'trung bình':<16}{precision.mean() * 100:9.1f}%"
+        f"{recall.mean() * 100:9.1f}%{f1.mean() * 100:9.1f}%"
+    )
 
 
 def print_repeated(X, y, repeats, n_folds, hist_mask=None):
     print(f"\n=== Lặp {repeats} lần (seed 0..{repeats - 1}) ===")
     accs = []
     chosen = Counter()
+    seed_rows = []
     for seed in range(repeats):
         result = run_once(X, y, seed, n_folds, hist_mask=hist_mask)
         accs.append(result["test_acc"])
         chosen[(result["metric"], result["vote"], result["k"])] += 1
+        seed_rows.append(
+            {
+                "seed": seed,
+                "metric": result["metric"],
+                "vote": result["vote"],
+                "k": result["k"],
+                "cv_acc": result["cv_acc"],
+                "test_acc": result["test_acc"],
+            }
+        )
         print(
             f"seed {seed:>2}: chọn {result['metric']:<10} vote={result['vote']:<8} "
             f"k={result['k']:<2}  CV {result['cv_acc'] * 100:5.1f}%  "
             f"test {result['test_acc'] * 100:5.1f}%"
         )
     accs = np.array(accs)
+    summary = {
+        "mean": float(accs.mean()),
+        "std": float(accs.std()),
+        "min": float(accs.min()),
+        "max": float(accs.max()),
+        "chosen": [
+            {"metric": m, "vote": v, "k": k, "count": n}
+            for (m, v, k), n in chosen.most_common()
+        ],
+        "seeds": seed_rows,
+    }
     print(
-        f"\nAccuracy trên test: {accs.mean() * 100:.1f}% ± {accs.std() * 100:.1f}% "
-        f"(thấp nhất {accs.min() * 100:.1f}%, cao nhất {accs.max() * 100:.1f}%)"
+        f"\nAccuracy trên test: {summary['mean'] * 100:.1f}% ± {summary['std'] * 100:.1f}% "
+        f"(thấp nhất {summary['min'] * 100:.1f}%, cao nhất {summary['max'] * 100:.1f}%)"
     )
     print(
         "Cấu hình được chọn: "
@@ -138,6 +176,109 @@ def print_repeated(X, y, repeats, n_folds, hist_mask=None):
             f"{m}/{v} k={k} ×{n}" for (m, v, k), n in chosen.most_common()
         )
     )
+    return summary
+
+
+def export_artifacts(result, repeats_summary, groups, export_dir, seed, n_dims):
+    """Ghi JSON + vẽ lại accuracy_k.png và confusion_matrix.png."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    out = Path(export_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    vote = result["vote"]
+    grid_rows = []
+    for v in VOTES:
+        for metric in METRICS:
+            for k in K_CHOICES:
+                grid_rows.append(
+                    {
+                        "metric": metric,
+                        "vote": v,
+                        "k": k,
+                        "cv_acc": float(result["grid"][(metric, v, k)]),
+                    }
+                )
+
+    payload = {
+        "features": groups,
+        "n_dims": int(n_dims),
+        "detailed_seed": {
+            "seed": int(seed),
+            "metric": result["metric"],
+            "vote": result["vote"],
+            "k": result["k"],
+            "cv_acc": float(result["cv_acc"]),
+            "test_acc": float(result["test_acc"]),
+            "n_train": int(result["n_train"]),
+            "n_test": int(result["n_test"]),
+            "confusion_matrix": result["cm"].tolist(),
+            "classes": list(SELECTED_BREEDS),
+        },
+        "cv_grid": grid_rows,
+        "repeats": repeats_summary,
+    }
+    json_path = (
+        Path(EVAL_JSON_PATH)
+        if out.resolve() == Path(DOCS_DIR).resolve()
+        else out / "evaluation_summary.json"
+    )
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    styles = {
+        "euclidean": "-o",
+        "manhattan": "-s",
+        "cosine": "-^",
+        "chi_square": "-D",
+    }
+    for metric in METRICS:
+        ys = [result["grid"][(metric, vote, k)] * 100 for k in K_CHOICES]
+        ax.plot(K_CHOICES, ys, styles[metric], label=metric)
+    ax.set_xlabel("k")
+    ax.set_ylabel("CV accuracy (%)")
+    ax.set_title(f"Cross-validation accuracy vs k (vote={vote})")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out / "accuracy_k.png", dpi=120)
+    plt.close(fig)
+
+    cm = result["cm"]
+    labels = [DISPLAY_NAMES[c] for c in SELECTED_BREEDS]
+    fig, ax = plt.subplots(figsize=(5.5, 4.8))
+    im = ax.imshow(cm, cmap="Blues")
+    ax.set_xticks(range(len(labels)))
+    ax.set_yticks(range(len(labels)))
+    ax.set_xticklabels(labels, rotation=30, ha="right")
+    ax.set_yticklabels(labels)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title(
+        f"Confusion matrix ({result['metric']}/{result['vote']}, k={result['k']})"
+    )
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(
+                j,
+                i,
+                str(cm[i, j]),
+                ha="center",
+                va="center",
+                color="white" if cm[i, j] > cm.max() / 2 else "black",
+            )
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    fig.tight_layout()
+    fig.savefig(out / "confusion_matrix.png", dpi=120)
+    plt.close(fig)
+    print(f"\nĐã xuất {json_path}")
+    print(f"Đã xuất {out / 'accuracy_k.png'}")
+    print(f"Đã xuất {out / 'confusion_matrix.png'}")
+    return json_path
 
 
 def main(argv=None):
@@ -155,13 +296,22 @@ def main(argv=None):
         raise SystemExit(str(exc))
     print(f"{len(y)} mẫu · {X.shape[1]} chiều ({', '.join(groups)})")
 
-    print_detailed(
-        run_once(X, y, args.seed, args.folds, hist_mask=hist),
-        args.seed,
-        args.folds,
-    )
+    detailed = run_once(X, y, args.seed, args.folds, hist_mask=hist)
+    print_detailed(detailed, args.seed, args.folds)
+
+    repeats_summary = None
     if args.repeats > 0:
-        print_repeated(X, y, args.repeats, args.folds, hist_mask=hist)
+        repeats_summary = print_repeated(X, y, args.repeats, args.folds, hist_mask=hist)
+
+    if args.export_dir:
+        export_artifacts(
+            detailed,
+            repeats_summary,
+            groups,
+            args.export_dir,
+            seed=args.seed,
+            n_dims=X.shape[1],
+        )
 
 
 if __name__ == "__main__":

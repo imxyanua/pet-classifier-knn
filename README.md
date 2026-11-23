@@ -214,6 +214,7 @@ Script sẽ:
 1. trích đặc trưng cho 1.000 ảnh, chạy song song trên nhiều nhân CPU (lần đầu mất khoảng 1 phút), lưu vào `features_cache.npz`
 2. với `seed=42`: in bảng accuracy cross-validation theo khoảng cách × $k$, cặp được chọn, accuracy trên test, ma trận nhầm lẫn, precision / recall / F1 theo lớp
 3. lặp quy trình với seed 0–9, in accuracy test của từng lần, trung bình ± độ lệch chuẩn và các cấu hình đã được chọn
+4. ghi `docs/evaluation_summary.json` và cập nhật `docs/accuracy_k.png`, `docs/confusion_matrix.png`
 
 Tùy chọn:
 
@@ -223,6 +224,7 @@ Tùy chọn:
 | `--folds` | `5` | số fold cross-validation |
 | `--repeats` | `10` | số lần lặp với seed khác nhau; `0` để bỏ qua |
 | `--features` | `color,geometry` | nhóm đặc trưng, chọn trong `color`, `geometry`, `hu` |
+| `--export-dir` | `docs` | thư mục xuất JSON + biểu đồ; `""` để bỏ |
 
 Ví dụ so sánh khi thêm lại Hu moments:
 
@@ -267,7 +269,7 @@ python app.py
 
 - **Mở ảnh…**: chọn một ảnh bất kỳ; app hiển thị ảnh gốc và vùng đối tượng sau phân đoạn
 - thanh trượt **k** (1–25), chọn khoảng cách (Euclidean / Manhattan / Cosine / Chi-square) và kiểu vote
-- **Nhận dạng**: hiện giống dự đoán và danh sách k láng giềng gần nhất kèm khoảng cách
+- **Nhận dạng**: hiện giống dự đoán, danh sách k láng giềng kèm khoảng cách, và **ảnh** các láng giềng gần nhất (tối đa 8)
 
 **Tab Đánh giá**
 

@@ -11,7 +11,7 @@ Các hướng dưới đây dựa trên điểm yếu **đã đo được** ở 
 | 3 | Làm giàu màu: HSV 16/16/16; H có màu + tỷ lệ không màu | **Đã làm phần lớn** | 61.1% → 65.4% → **67.1% ± 1.7**; H vòng tròn / Lab không giữ |
 | 4 | Đo và cải thiện phân đoạn bằng trimap của Oxford | **Đã làm phần lớn** | IoU 0.655 → 0.716; accuracy lúc đó 59.3% → 61.1% |
 | 5 | Cải tiến k-NN: vote theo khoảng cách, khảo sát cosine / χ² | **Đã làm** | 65.4% → **66.6% ± 2.9**; CV luôn chọn Manhattan + vote khoảng cách |
-| 6 | Kỹ thuật: test, tham số dòng lệnh, xuất kết quả tự động | Một phần | Dễ thử nghiệm, dễ viết báo cáo |
+| 6 | Kỹ thuật: test, CLI, xuất JSON/biểu đồ, ảnh láng giềng trong app | **Đã làm phần lớn** | Dễ thử nghiệm và thuyết trình |
 
 Con số ở mục 1 và 2 là kết quả tại thời điểm làm, trước khi sửa phân đoạn ở mục 4.
 
@@ -117,9 +117,9 @@ Các thay đổi trong `knn/knn.py` / `knn/validation.py`, phù hợp với yêu
 
 - ~~**Unit test**~~ — đã làm: `tests/` kiểm tra k-NN, phá hòa, chuẩn hóa, chia tập, cross-validation, metric và chọn nhóm đặc trưng (`python -m pytest`).
 - ~~**Tham số dòng lệnh**~~ — đã làm: `--seed`, `--folds`, `--repeats`, `--features`.
-- **Xuất kết quả tự động**: `evaluate.py` ghi bảng accuracy ra JSON và vẽ lại `docs/accuracy_k.png`, `docs/confusion_matrix.png`, để README luôn khớp với code.
+- ~~**Xuất kết quả tự động**~~ — đã làm: `evaluate.py` mặc định ghi `docs/evaluation_summary.json` và vẽ lại `accuracy_k.png` / `confusion_matrix.png`.
+- ~~**Hiển thị ảnh láng giềng trong app**~~ — đã làm: strip ngang dưới ảnh gốc/phân đoạn, tối đa 8 ảnh kèm nhãn và khoảng cách.
 - **Vector hóa đánh giá:** tính cả ma trận khoảng cách test × train trong một lệnh thay vì lặp từng ảnh. Không cần với 1.000 ảnh, nhưng hữu ích nếu mở rộng lên cả 37 giống (khoảng 7.400 ảnh).
-- **Hiển thị trong app** các ảnh láng giềng gần nhất (không chỉ tên và khoảng cách), để thấy trực quan vì sao k-NN dự đoán như vậy. Rất có ích khi thuyết trình.
 
 ## Gợi ý lộ trình
 
@@ -130,4 +130,4 @@ Nếu thời gian có hạn, thứ tự sau cho nhiều giá trị nhất cho b�
 3. ~~Mục 4a, 4b (đo IoU, cải thiện khởi tạo GrabCut)~~ — đã làm; bảng so sánh các cách khởi tạo nên đưa vào phần phân đoạn của báo cáo.
 4. ~~Mục 3 (histogram HSV mịn hơn)~~ — đã làm.
 5. ~~Mục 5 (vote theo khoảng cách, khảo sát cosine / χ²)~~ — đã làm.
-6. Còn lại nếu còn thời gian: histogram 2D H–S; hiện láng giềng bằng ảnh trong app; hoặc (ngoài đề) đặc trưng kết cấu cho Egyptian Mau.
+6. Còn lại nếu còn thời gian: histogram 2D H–S; hoặc (ngoài đề) đặc trưng kết cấu cho Egyptian Mau.

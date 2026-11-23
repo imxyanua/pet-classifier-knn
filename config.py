@@ -8,6 +8,8 @@ TAR_PATH = os.path.join(RAW_DIR, "images.tar.gz")
 ANNOTATIONS_TAR_PATH = os.path.join(RAW_DIR, "annotations.tar.gz")
 TRIMAP_DIR = os.path.join(RAW_DIR, "annotations", "trimaps")
 CACHE_PATH = os.path.join(ROOT_DIR, "features_cache.npz")
+DOCS_DIR = os.path.join(ROOT_DIR, "docs")
+EVAL_JSON_PATH = os.path.join(DOCS_DIR, "evaluation_summary.json")
 
 SELECTED_BREEDS = [
     "pug",
