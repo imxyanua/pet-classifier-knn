@@ -1,0 +1,657 @@
+{
+  "features": [
+    "color",
+    "geometry"
+  ],
+  "n_dims": 60,
+  "detailed_seed": {
+    "seed": 42,
+    "metric": "manhattan",
+    "vote": "distance",
+    "k": 19,
+    "cv_acc": 0.655,
+    "test_acc": 0.68,
+    "n_train": 800,
+    "n_test": 200,
+    "confusion_matrix": [
+      [
+        28,
+        7,
+        3,
+        1,
+        1
+      ],
+      [
+        5,
+        29,
+        1,
+        4,
+        1
+      ],
+      [
+        5,
+        1,
+        32,
+        1,
+        1
+      ],
+      [
+        7,
+        4,
+        3,
+        24,
+        2
+      ],
+      [
+        3,
+        8,
+        0,
+        6,
+        23
+      ]
+    ],
+    "classes": [
+      "pug",
+      "samoyed",
+      "Bombay",
+      "Egyptian_Mau",
+      "Sphynx"
+    ]
+  },
+  "cv_grid": [
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 1,
+      "cv_acc": 0.5850000000000001
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 3,
+      "cv_acc": 0.5925
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 5,
+      "cv_acc": 0.5974999999999999
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 7,
+      "cv_acc": 0.6075
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 9,
+      "cv_acc": 0.61375
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 11,
+      "cv_acc": 0.61
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 13,
+      "cv_acc": 0.61875
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 15,
+      "cv_acc": 0.62625
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 19,
+      "cv_acc": 0.61875
+    },
+    {
+      "metric": "euclidean",
+      "vote": "uniform",
+      "k": 25,
+      "cv_acc": 0.5987500000000001
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 1,
+      "cv_acc": 0.6
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 3,
+      "cv_acc": 0.60875
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 5,
+      "cv_acc": 0.6112500000000001
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 7,
+      "cv_acc": 0.635
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 9,
+      "cv_acc": 0.6275000000000001
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 11,
+      "cv_acc": 0.6175
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 13,
+      "cv_acc": 0.6174999999999999
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 15,
+      "cv_acc": 0.6299999999999999
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 19,
+      "cv_acc": 0.6412500000000001
+    },
+    {
+      "metric": "manhattan",
+      "vote": "uniform",
+      "k": 25,
+      "cv_acc": 0.63
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 1,
+      "cv_acc": 0.5850000000000001
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 3,
+      "cv_acc": 0.6137499999999999
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 5,
+      "cv_acc": 0.60375
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 7,
+      "cv_acc": 0.615
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 9,
+      "cv_acc": 0.6175
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 11,
+      "cv_acc": 0.61875
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 13,
+      "cv_acc": 0.5987500000000001
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 15,
+      "cv_acc": 0.6
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 19,
+      "cv_acc": 0.60875
+    },
+    {
+      "metric": "cosine",
+      "vote": "uniform",
+      "k": 25,
+      "cv_acc": 0.60375
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 1,
+      "cv_acc": 0.51875
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 3,
+      "cv_acc": 0.54375
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 5,
+      "cv_acc": 0.5675000000000001
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 7,
+      "cv_acc": 0.5537500000000001
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 9,
+      "cv_acc": 0.575
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 11,
+      "cv_acc": 0.58875
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 13,
+      "cv_acc": 0.5900000000000001
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 15,
+      "cv_acc": 0.59875
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 19,
+      "cv_acc": 0.59625
+    },
+    {
+      "metric": "chi_square",
+      "vote": "uniform",
+      "k": 25,
+      "cv_acc": 0.6025
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 1,
+      "cv_acc": 0.5850000000000001
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 3,
+      "cv_acc": 0.5962500000000001
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 5,
+      "cv_acc": 0.60625
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 7,
+      "cv_acc": 0.6225
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 9,
+      "cv_acc": 0.6275000000000001
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 11,
+      "cv_acc": 0.62625
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 13,
+      "cv_acc": 0.635
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 15,
+      "cv_acc": 0.64
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 19,
+      "cv_acc": 0.63375
+    },
+    {
+      "metric": "euclidean",
+      "vote": "distance",
+      "k": 25,
+      "cv_acc": 0.6137499999999999
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 1,
+      "cv_acc": 0.6
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 3,
+      "cv_acc": 0.61125
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 5,
+      "cv_acc": 0.6225
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 7,
+      "cv_acc": 0.64625
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 9,
+      "cv_acc": 0.6425000000000001
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 11,
+      "cv_acc": 0.6362500000000001
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 13,
+      "cv_acc": 0.64
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 15,
+      "cv_acc": 0.6475
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 19,
+      "cv_acc": 0.655
+    },
+    {
+      "metric": "manhattan",
+      "vote": "distance",
+      "k": 25,
+      "cv_acc": 0.6487499999999999
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 1,
+      "cv_acc": 0.5850000000000001
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 3,
+      "cv_acc": 0.61625
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 5,
+      "cv_acc": 0.6125
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 7,
+      "cv_acc": 0.63125
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 9,
+      "cv_acc": 0.63125
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 11,
+      "cv_acc": 0.63125
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 13,
+      "cv_acc": 0.625
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 15,
+      "cv_acc": 0.6175
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 19,
+      "cv_acc": 0.625
+    },
+    {
+      "metric": "cosine",
+      "vote": "distance",
+      "k": 25,
+      "cv_acc": 0.62
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 1,
+      "cv_acc": 0.51875
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 3,
+      "cv_acc": 0.5475
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 5,
+      "cv_acc": 0.575
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 7,
+      "cv_acc": 0.5675000000000001
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 9,
+      "cv_acc": 0.58875
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 11,
+      "cv_acc": 0.6074999999999999
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 13,
+      "cv_acc": 0.60125
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 15,
+      "cv_acc": 0.61375
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 19,
+      "cv_acc": 0.61
+    },
+    {
+      "metric": "chi_square",
+      "vote": "distance",
+      "k": 25,
+      "cv_acc": 0.62125
+    }
+  ],
+  "repeats": {
+    "mean": 0.6705000000000001,
+    "std": 0.01680029761641143,
+    "min": 0.65,
+    "max": 0.71,
+    "chosen": [
+      {
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 25,
+        "count": 5
+      },
+      {
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 19,
+        "count": 3
+      },
+      {
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 13,
+        "count": 1
+      },
+      {
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 15,
+        "count": 1
+      }
+    ],
+    "seeds": [
+      {
+        "seed": 0,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 19,
+        "cv_acc": 0.685,
+        "test_acc": 0.66
+      },
+      {
+        "seed": 1,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 25,
+        "cv_acc": 0.6825,
+        "test_acc": 0.665
+      },
+      {
+        "seed": 2,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 25,
+        "cv_acc": 0.67,
+        "test_acc": 0.68
+      },
+      {
+        "seed": 3,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 13,
+        "cv_acc": 0.665,
+        "test_acc": 0.675
+      },
+      {
+        "seed": 4,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 19,
+        "cv_acc": 0.6649999999999999,
+        "test_acc": 0.65
+      },
+      {
+        "seed": 5,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 15,
+        "cv_acc": 0.6787500000000001,
+        "test_acc": 0.66
+      },
+      {
+        "seed": 6,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 25,
+        "cv_acc": 0.6725,
+        "test_acc": 0.655
+      },
+      {
+        "seed": 7,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 19,
+        "cv_acc": 0.6625,
+        "test_acc": 0.71
+      },
+      {
+        "seed": 8,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 25,
+        "cv_acc": 0.675,
+        "test_acc": 0.685
+      },
+      {
+        "seed": 9,
+        "metric": "manhattan",
+        "vote": "distance",
+        "k": 25,
+        "cv_acc": 0.67875,
+        "test_acc": 0.665
+      }
+    ]
+  }
+}

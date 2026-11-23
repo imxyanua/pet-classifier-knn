@@ -135,13 +135,13 @@ def knn_predict_one(x, X_train, y_train, k=5, metric="euclidean", vote="uniform"
         pred = _distance_vote(labels, neighbor_dists)
     else:
         pred = _majority_vote(labels, neighbor_dists)
-    return pred, neighbor_dists, labels
+    return pred, neighbor_dists, labels, nn
 
 
 def knn_predict_batch(X, X_train, y_train, k=5, metric="euclidean", vote="uniform", hist_mask=None):
     preds = []
     for x in X:
-        pred, _, _ = knn_predict_one(
+        pred, _, _, _ = knn_predict_one(
             x, X_train, y_train, k=k, metric=metric, vote=vote, hist_mask=hist_mask
         )
         preds.append(pred)

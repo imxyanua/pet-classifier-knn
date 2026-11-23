@@ -28,7 +28,7 @@ def two_clusters(n_per_class=30, seed=0):
 def test_separated_clusters_are_classified_perfectly(metric, vote):
     X, y = two_clusters()
     for x, label in zip(X, y):
-        pred, _, _ = knn_predict_one(x, X, y, k=3, metric=metric, vote=vote)
+        pred, _, _, _ = knn_predict_one(x, X, y, k=3, metric=metric, vote=vote)
         assert pred == label
 
 
@@ -44,14 +44,14 @@ def test_cosine_classifies_separated_positive_clusters(vote):
     )
     y = np.array(["a"] * 25 + ["b"] * 25)
     for x, label in zip(X, y):
-        pred, _, _ = knn_predict_one(x, X, y, k=3, metric="cosine", vote=vote)
+        pred, _, _, _ = knn_predict_one(x, X, y, k=3, metric="cosine", vote=vote)
         assert pred == label
 
 
 def test_neighbors_are_sorted_by_distance():
     X_train = np.array([[3.0], [1.0], [2.0], [10.0]])
     y_train = np.array(["c", "a", "b", "d"])
-    _, dists, labels = knn_predict_one(np.array([0.0]), X_train, y_train, k=3)
+    _, dists, labels, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=3)
     assert list(labels) == ["a", "b", "c"]
     assert np.all(np.diff(dists) >= 0)
 
@@ -59,7 +59,7 @@ def test_neighbors_are_sorted_by_distance():
 def test_tie_is_broken_by_mean_distance():
     X_train = np.array([[0.8], [1.0], [1.5], [1.1]])
     y_train = np.array(["pug", "bombay", "pug", "bombay"])
-    pred, _, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=4)
+    pred, _, _, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=4)
     assert pred == "bombay"
 
 
@@ -67,15 +67,15 @@ def test_distance_vote_prefers_closer_neighbor_class():
     # 2 pug xa, 1 bombay rất gần → uniform chọn pug, distance chọn bombay
     X_train = np.array([[0.1], [2.0], [2.1]])
     y_train = np.array(["bombay", "pug", "pug"])
-    uniform, _, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=3, vote="uniform")
-    weighted, _, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=3, vote="distance")
+    uniform, _, _, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=3, vote="uniform")
+    weighted, _, _, _ = knn_predict_one(np.array([0.0]), X_train, y_train, k=3, vote="distance")
     assert uniform == "pug"
     assert weighted == "bombay"
 
 
 def test_k_larger_than_train_set_is_clamped():
     X, y = two_clusters(n_per_class=2)
-    pred, dists, _ = knn_predict_one(X[0], X, y, k=50)
+    pred, dists, _, _ = knn_predict_one(X[0], X, y, k=50)
     assert len(dists) == len(X)
     assert pred in ("a", "b")
 
@@ -106,7 +106,7 @@ def test_chi_square_hybrid_uses_histogram_mask():
     X_train = np.array([[0.0, 0.5], [3.0, 0.5]])
     y_train = np.array(["near", "far"])
     hist_mask = np.array([False, True])
-    pred, dists, _ = knn_predict_one(
+    pred, dists, _, _ = knn_predict_one(
         np.array([0.1, 0.5]),
         X_train,
         y_train,

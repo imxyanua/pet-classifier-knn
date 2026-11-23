@@ -19,6 +19,17 @@ Trừ khi ghi khác, accuracy là accuracy trên tập test, trung bình ± đ�
 
 ## [Chưa phát hành]
 
+## 2026-11-23 — App láng giềng + xuất đánh giá
+
+PR [#10](https://github.com/imxyanua/pet-classifier-knn/pull/10).
+
+**Thêm**
+- Tab nhận dạng hiện **ảnh** các láng giềng gần nhất (tối đa 8) kèm nhãn và khoảng cách — hữu ích khi thuyết trình.
+- `evaluate.py --export-dir docs` (mặc định): ghi `docs/evaluation_summary.json`, vẽ lại `accuracy_k.png` và `confusion_matrix.png`.
+- `knn_predict_one` trả thêm chỉ số láng giềng trong tập train.
+
+Không đổi accuracy nhận dạng.
+
 ## 2026-11-23 — H trên pixel có màu
 
 PR [#9](https://github.com/imxyanua/pet-classifier-knn/pull/9).

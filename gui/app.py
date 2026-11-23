@@ -159,11 +159,24 @@ class PetClassifierApp(ctk.CTk):
         images.grid(row=0, column=1, sticky="nsew", pady=8)
         images.grid_columnconfigure((0, 1), weight=1)
         images.grid_rowconfigure(0, weight=1)
+        images.grid_rowconfigure(1, weight=0)
 
         self.orig_frame, self.orig_label = self._image_card(images, "Ảnh gốc")
         self.seg_frame, self.seg_label = self._image_card(images, "Đối tượng đã phân đoạn")
         self.orig_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         self.seg_frame.grid(row=0, column=1, sticky="nsew")
+
+        neighbors = ctk.CTkFrame(images)
+        neighbors.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        ctk.CTkLabel(neighbors, text="Láng giềng gần nhất (ảnh train)").pack(
+            anchor="w", padx=12, pady=(8, 4)
+        )
+        self.neighbor_strip = ctk.CTkScrollableFrame(
+            neighbors, orientation="horizontal", height=150
+        )
+        self.neighbor_strip.pack(fill="x", padx=8, pady=(0, 8))
+        self.neighbor_thumbs = []
+        self._clear_neighbor_thumbs("Chưa nhận dạng — láng giềng sẽ hiện ở đây.")
 
     def _image_card(self, parent, title):
         card = ctk.CTkFrame(parent)
@@ -244,6 +257,41 @@ class PetClassifierApp(ctk.CTk):
         self.photo_refs[key] = img
         widget.configure(image=img, text="")
 
+    def _clear_neighbor_thumbs(self, placeholder=None):
+        for child in self.neighbor_strip.winfo_children():
+            child.destroy()
+        self.neighbor_thumbs = []
+        if placeholder:
+            ctk.CTkLabel(self.neighbor_strip, text=placeholder).pack(padx=8, pady=40)
+
+    def _show_neighbor_thumbs(self, train_local_indices, labels, dists):
+        """train_local_indices: chỉ số trong tập train (self.train_idx)."""
+        self._clear_neighbor_thumbs()
+        paths = self.paths[self.train_idx]
+        # Hiện tối đa 8 ảnh để strip không quá dài khi k lớn.
+        show_n = min(len(train_local_indices), 8)
+        for i in range(show_n):
+            local_i = int(train_local_indices[i])
+            path = paths[local_i]
+            try:
+                bgr = load_bgr(path)
+            except Exception:
+                continue
+            card = ctk.CTkFrame(self.neighbor_strip, width=120)
+            card.pack(side="left", padx=6, pady=4)
+            card.pack_propagate(False)
+            pil = bgr_to_pil(bgr, max_side=110)
+            thumb = ctk.CTkImage(light_image=pil, dark_image=pil, size=pil.size)
+            self.neighbor_thumbs.append(thumb)
+            ctk.CTkLabel(card, image=thumb, text="").pack(padx=4, pady=(4, 0))
+            caption = (
+                f"{i + 1}. {DISPLAY_NAMES.get(labels[i], labels[i])}\n"
+                f"d={dists[i]:.2f}"
+            )
+            ctk.CTkLabel(card, text=caption, font=ctk.CTkFont(size=11)).pack(
+                padx=4, pady=(2, 6)
+            )
+
     def _try_load_cache(self):
         cached = load_feature_cache()
         if cached is None:
@@ -307,7 +355,7 @@ class PetClassifierApp(ctk.CTk):
             )
             y_train = self.y[self.train_idx]
             k = self.k_var.get()
-            pred, dists, labels = knn_predict_one(
+            pred, dists, labels, nn = knn_predict_one(
                 X_query[0],
                 X_train,
                 y_train,
@@ -321,6 +369,7 @@ class PetClassifierApp(ctk.CTk):
             for i, (lab, dist) in enumerate(zip(labels, dists), start=1):
                 lines.append(f"{i}. {DISPLAY_NAMES.get(lab, lab):<16}  d = {dist:.3f}")
             self._set_textbox(self.neighbor_box, "\n".join(lines))
+            self._show_neighbor_thumbs(nn, labels, dists)
             self._set_status(f"Dự đoán: {DISPLAY_NAMES.get(pred, pred)}")
         except Exception as exc:
             messagebox.showerror("Lỗi nhận dạng", str(exc))
